@@ -1,0 +1,453 @@
+<div id="container">
+<canvas id="myCanvas" width="729" height="729" style="border:1px solid #d3d3d3;">
+Your browser does not support the HTML5 canvas tag.</canvas>
+
+<canvas id="myCanvas2" width="729" height="729" style="border:1px solid #d3d3d3;">
+Your browser does not support the HTML5 canvas tag.</canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.10.0"> </script>
+
+<script>
+
+//<script src="https://cdn.jsdelivr.net/gh/nicolaspanel/numjs@0.15.1/dist/numjs.min.js">
+
+/*<script type='text/javascript' src='E:\numjs_local\dist\numjs.js'>
+
+<script src="math.min.js" type="text/javascript">*/
+
+var frameSize = 729
+var frame2Size = 729
+
+var canvas = document.getElementById("myCanvas");
+var ctx    = canvas.getContext("2d");
+
+var canvas2 = document.getElementById("myCanvas2");
+var ctx2    = canvas2.getContext("2d");
+
+var cellSize = 1
+
+var templateSize = 5
+
+function mod(n, m) {
+        return ((n % m) + m) % m;
+}
+
+function modularPaddArray(prePadArray, border){  // buffer should be input tile radius
+
+    var ppa = prePadArray
+    var b   = border  // size of padding
+    
+    // 9 parts, original array in center, 4 sides, 4 corners
+    
+    var botSlice   = ppa.slice([ppa.shape[0]-b,ppa.shape[0]])
+    var topSlice   = ppa.slice([             0,           b])
+    
+    var rightSlice = ppa.slice(null, [ppa.shape[1]-b,ppa.shape[1]])
+    var leftSlice  = ppa.slice(null, [             0,           b])
+    
+    var topLeftCor   = ppa.slice([             0,           b],[             0,           b])
+    var topRightCor  = ppa.slice([             0,           b],[ppa.shape[1]-b,ppa.shape[1]])
+    var botLeftCor   = ppa.slice([ppa.shape[0]-b,ppa.shape[0]],[             0,           b])
+    var botRightCor  = ppa.slice([ppa.shape[0]-b,ppa.shape[0]],[ppa.shape[1]-b,ppa.shape[1]])
+    
+    var topPad = nj.concatenate( nj.concatenate( botRightCor, botSlice), botLeftCor)
+    var midPad = nj.concatenate( nj.concatenate(   rightSlice,      ppa), leftSlice) 
+    var botPad = nj.concatenate( nj.concatenate( topRightCor, topSlice), topLeftCor) 
+    
+    var padded  = nj.concatenate(nj.concatenate(topPad.T, midPad.T), botPad.T).T
+    
+    return padded ////console.log(padded)
+
+}
+
+
+function modularZeroPaddArray(prePadArray, border){  // buffer should be input tile radius
+
+    var ppa = prePadArray
+    var b   = border  // size of padding
+    
+    // 9 parts, original array in center, 4 sides, 4 corners
+    /*
+    var botSlice   = ppa.slice([ppa.shape[0]-b,ppa.shape[0]])
+    var topSlice   = ppa.slice([             0,           b])
+    
+    var rightSlice = ppa.slice(null, [ppa.shape[1]-b,ppa.shape[1]])
+    var leftSlice  = ppa.slice(null, [             0,           b])
+    
+    var topLeftCor   = ppa.slice([             0,           b],[             0,           b])
+    var topRightCor  = ppa.slice([             0,           b],[ppa.shape[1]-b,ppa.shape[1]])
+    var botLeftCor   = ppa.slice([ppa.shape[0]-b,ppa.shape[0]],[             0,           b])
+    var botRightCor  = ppa.slice([ppa.shape[0]-b,ppa.shape[0]],[ppa.shape[1]-b,ppa.shape[1]])*/
+    
+    var top  = nj.zeros([b, ppa.shape[1] + b*2])  // I think x might actually be [1] and y might be [0]
+    var bot  = nj.zeros([b, ppa.shape[1] + b*2])  // I think x might actually be [1] and y might be [0]
+    
+    var left = nj.zeros([ppa.shape[0], b])
+    var right = nj.zeros([ppa.shape[0], b])
+    
+    //var topPad = nj.concatenate( nj.concatenate( botRightCor, botSlice), botLeftCor)
+    var midPad = nj.concatenate( nj.concatenate(   left,      ppa), right) 
+    //var botPad = nj.concatenate( nj.concatenate( topRightCor, topSlice), topLeftCor) 
+    
+    var padded  = nj.concatenate(nj.concatenate(top.T, midPad.T), bot.T).T
+    
+    return padded ////console.log(padded)
+
+}
+
+
+function setPix1(x, y, value){
+
+    if(value != 0) {value += 200}
+
+    var color1 = (value / 2) % 256
+    var color2 = (value / 4) % 256
+    var color3 = (value / 8) % 256
+
+    setPix(x,y, color1, color2, color3)
+
+}
+
+function setPix(x, y, r, g, b){
+
+
+    var xPix = x * cellSize;
+    var yPix = y * cellSize;
+
+    ctx.fillStyle = 'rgb(' + r + ',' + g + ',' + b + ')';
+    
+    ctx.fillRect(xPix, yPix , cellSize, cellSize);
+
+}
+
+function applyRule1(readFrame, template){
+
+    //var border = (template.shape[0] -1) / 2
+    
+    //var paddedReadFrame = modularPaddArray(readFrame, border)
+    
+    //console.log(readFrame.shape)
+    //console.log(paddedReadFrame.shape)
+    //console.log(template.shape)
+    
+    return tf.conv2d(readFrame, template, [1,1],'same')
+
+}
+
+function applyRule2(frame, modList){
+
+    // going to do this the slow way because maybe that is fast enough
+    // numjs can't do this vectorized, maybe math.js can but we can use that if we need it
+    
+    var s0 = frame.shape[0]
+    var s1 = frame.shape[1]
+    
+    //for(var i = 0; i = modList.length; i++){
+    
+    //console.log("undefined?")
+   
+    list = frame.tolist()
+   
+    //console.log(list)
+   
+    list = math.round(list)
+    
+    frame = nj.array(list)
+   
+    //console.log(frame.shape)
+   
+    ////console.log(list[76/2][76/2])
+    
+    ////console.log(frame)
+    
+    //frame = frame.mod(2)
+   
+    
+    var keepCells = frame.mod(2)
+    frame = frame.multiply(keepCells)
+    
+    
+    //for(var i = 0; i < 76; i++){
+    //    for (var j = 0; j < 76; j++){
+        
+    //        if(list[i][j] > 3355443){
+            
+                //console.log("" + i.toString() + " , " + j.toString())
+           
+            
+    //        }
+        
+    //    }
+    
+    
+    //}
+    
+    frame = frame.mod(65536)
+    
+    //frame = frame.add(keepCells.multiply(2))
+    
+    list = frame.tolist()
+    
+    //console.log("after mod")
+    
+    //for(var i = 0; i < 76; i++){
+    //    for (var j = 0; j < 76; j++){
+        
+           // if(list[i][j] > 3355443){
+            
+                //console.log("" + i.toString() + " , " + j.toString())
+           
+            
+    //        }
+    //    }
+    
+    //}
+    
+    //}
+    //frame
+    
+    //copyList = frame.tolist()
+    
+    //result = math.mod(copyList, 2)
+    
+    //frame = nj.array(result)
+    
+    ////console.log(frame)
+    
+    return frame
+ 
+}
+
+function display(frame){
+
+    var s0 = frame.shape[0]
+    var s1 = frame.shape[1]
+
+    list = frame.tolist()
+    for(var i = 0; i < s0; i++){
+        for(var j = 0; j < s1; j++){
+        
+            setPix1(i,j,list[i][j])
+        
+        }
+    }
+    
+}
+
+
+//var frame1 = nj.zeros([frameSize,frameSize])
+//var frame2 = nj.zeros((frameSize,frameSize), dtype = uint32)
+
+// https://stackoverflow.com/questions/34685947/adjust-single-value-within-tensor-tensorflow/34686952#34686952
+
+var values = new Array(frameSize * frameSize).fill(0);
+
+var startValue = 1  // maybe allow this to be changed later
+
+values[Math.floor(frameSize/2)* Math.floor(frameSize/2)] = startValue
+
+//console.log( Math.floor(frameSize/2))
+console.log( values[Math.floor(frameSize/2)*Math.floor(frameSize/2)])
+
+const frame1Init = tf.tensor(values, [frameSize,frameSize,1])
+
+var frame1 = tf.variable(frame1Init)
+
+frame1.print()
+
+//var template = nj.array([[0,1,1,1,1,0],[1,0,0,0,0,1],[1,0,1,0,0,1],[0,1,1,1,1,0],[0,0,0,0,0,0],[0,1,1,1,1,1],[1,0,0,1,0,0,],[0,1,1,1,1,1,],[0,0,0,0,0,0],[0,0,1,1,1,0],[0,1,0,1,0,1],[0,0,1,0,0,1],
+ //                       [0,0,0,0,0,0],[1,0,1,1,1,1],[0,0,0,0,0,0],[0,0,1,1,1,0],[0,0,0,0,0,1],[0,0,0,0,0,1],[0,0,1,1,1,0],[0,0,0,0,0,0],[0,0,0,1,1,1],[0,0,1,0,0,0],[0,0,0,1,1,1],[0,0,1,0,0,0],[0,0,0,1,1,1]])
+
+//var templateTop = nj.zeros([25,9])
+//var templateBot = nj.zeros([25,10])
+
+//var template = nj.ones([9,9])
+
+////console.log(template.shape)
+////console.log(templateTop.shape)
+
+//template = nj.concatenate(nj.concatenate(templateTop, template), templateBot)
+
+//tempalte = template.multiply(3)
+                        
+//console.log(template.shape)
+
+var filterValues = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+                        
+var template = tf.tensor2d(filterValues,[5,5,1,1])//nj.array([[1,0,0,0,1],[0,0,2,0,0],[0,2,1,2,0],[0,0,2,0,0],[1,0,0,0,1]])
+var modList  = [2]
+
+var gridSize = 5
+
+setPatternGridSize(template.shape[0])
+
+ctx.fillStyle = 'rgb(0,0,0)';
+
+ctx.fillRect(0,0, frameSize, frameSize);
+
+
+//console.log(template.shape)
+
+//array = nj.array([1,2,3,4,5,6,7,8,9])
+
+//console.log("what")
+
+//console.log(array)
+
+//console.log("testing math.js")
+
+function resetGrid(){
+
+ctx2.fillStyle = 'rgb(255,255,255)';
+ctx2.fillRect(0, 0, frame2Size, frame2Size)
+
+ctx2.fillStyle = 'rgb(0,0,0)';
+
+ctx2.fillRect(40, 40, 40, 40)
+ctx2.fillRect(120, 40, 40, 40)
+ctx2.fillRect(200, 40, 40, 40)
+ctx2.fillRect(280, 40, 40, 40)
+ctx2.fillRect(360, 40, 40, 40)
+
+
+}
+
+
+
+function setPatternGridSize(size){
+
+    resetGrid()
+
+    if(size > gridSize){
+    
+        var diff = (size - gridSize)/2
+    
+        template = modularZeroPaddArray(template, diff)
+    
+    }
+    
+    if(size < gridSize){
+    
+        template = template.slice([diff, gridSize-diff],[diff,gridSize-diff])
+    
+    }
+    
+    
+    gridSize = size
+    
+    var space = frame2Size - 240
+
+    var gridStride = Math.floor(space / gridSize)
+    
+    //var list = template.tolist()
+    
+    ctx2.font= (gridStride-4).toString()+ "px Arial";
+    
+        ctx2.fillText("ABC",120,120)
+    
+    //ctx.fillText("Hello World",10,50);
+    
+    for(var i = 0; i < gridSize; i++){
+        for(var j = 0; j < gridSize; j++){
+    
+            //ctx2.fillText(list[i][j].toString(), i*gridStride, j*gridStride)
+            //ctx2.fillRect(i*gridStride + 120 + 2, j*gridStride+120 + 2, gridStride - 2, gridStride - 2)
+        }
+    }
+
+}
+
+const scalar2   = tf.scalar(2)
+const scalar4   = tf.scalar(4)
+const scalar256 = tf.scalar(256)
+
+const displayStart = tf.concat([tf.zerosLike(frame1),tf.zerosLike(frame1),tf.zerosLike(frame1)],2)
+
+const displayVar = tf.variable(displayStart)
+
+function display (frame1){
+
+    //console.log(frame1.dtype)
+    //console.log(scalar2.dtype)
+    //console.log(scalar4.dtype)
+    //console.log(scalar256.dtype)
+
+    //console.log(frame1.shape)
+    
+    displayVar.assign(tf.concat([frame1.div(scalar2).mod(scalar256).div(scalar256),
+                      frame1.div(scalar4).mod(scalar256).div(scalar256),
+                      frame1.mod(scalar256).div(scalar256)],2))
+                      
+    //console.log(displayVar.shape)
+                   
+    //var color1 = frame1.div(scalar2).mod(scalar256).div(scalar256)
+    //var color2 = frame1.div(scalar3).mod(scalar256).div(scalar256)
+    //var color3 = frame1.mod(scalar256).div(scalar256)
+    
+    tf.toPixels(displayVar, canvas)
+    
+
+
+}
+
+document.getElementById("container").addEventListener('click', function(event) {
+
+    //frame1.print()
+    //template.print()
+
+    frame1.assign(applyRule1(frame1, template))
+    frame1.assign(applyRule2(frame1))
+    
+    //frame1.print()
+    //template.print()
+    
+    display(frame1)
+    
+    
+
+    
+    //tf.toPixels(frame1, canvas)
+    
+    /*
+    var canvas1Left = canvas.offsetLeft;
+    var canvas1Top  = canvas.offsetTop;
+    
+    var pixX1 = event.pageX - canvas1Left;
+    var pixY1 = event.pageY - canvas1Top;
+    
+    if(pixY1 >= 0 && pixY1 <= frameSize){
+
+        frame1 = applyRule1(frame1, template)
+        frame1 = applyRule2(frame1, modList)
+        display(frame1)
+        console.log("done")
+    }
+
+    var canvas2Left = canvas2.offsetLeft;
+    var canvas2Top  = canvas2.offsetTop;
+    
+    var pixX2 = event.pageX - canvas2Left;
+    var pixY2 = event.pageY - canvas2Top;
+    
+    console.log(pixX2)
+    console.log(pixY2)
+    
+    if(pixY2 >= 40 && pixY2 <= 80){
+    
+        if(mod(pixX2,80) >= 40){
+        
+            var gridSize = 1+ 2 * (Math.floor(pixX2 / 80) + 1)
+        
+            setPatternGridSize(gridSize)
+
+
+        }
+    
+    
+    }*/
+    
+}); 
+
+
+</script>
