@@ -36,63 +36,18 @@ function mod(n, m) {
 function modularPaddArray(prePadArray, border){  // buffer should be input tile radius
 
     var ppa = prePadArray
-    var b   = border  // size of padding
+    var b   = (border.shape[0]-1) /2   // size of padding
+       
+    var upper_pad = ppa.slice([ppa.shape[0]-b,0],[b,ppa.shape[1]])
+    var lower_pad = ppa.slice([0,0],[b,ppa.shape[1]])
     
-    // 9 parts, original array in center, 4 sides, 4 corners
+    var partial   = tf.concat([upper_pad, ppa, lower_pad], axis = 0)
     
-    var botSlice   = ppa.slice([ppa.shape[0]-b,ppa.shape[0]])
-    var topSlice   = ppa.slice([             0,           b])
-    
-    var rightSlice = ppa.slice(null, [ppa.shape[1]-b,ppa.shape[1]])
-    var leftSlice  = ppa.slice(null, [             0,           b])
-    
-    var topLeftCor   = ppa.slice([             0,           b],[             0,           b])
-    var topRightCor  = ppa.slice([             0,           b],[ppa.shape[1]-b,ppa.shape[1]])
-    var botLeftCor   = ppa.slice([ppa.shape[0]-b,ppa.shape[0]],[             0,           b])
-    var botRightCor  = ppa.slice([ppa.shape[0]-b,ppa.shape[0]],[ppa.shape[1]-b,ppa.shape[1]])
-    
-    var topPad = nj.concatenate( nj.concatenate( botRightCor, botSlice), botLeftCor)
-    var midPad = nj.concatenate( nj.concatenate(   rightSlice,      ppa), leftSlice) 
-    var botPad = nj.concatenate( nj.concatenate( topRightCor, topSlice), topLeftCor) 
-    
-    var padded  = nj.concatenate(nj.concatenate(topPad.T, midPad.T), botPad.T).T
-    
-    return padded ////console.log(padded)
-
-}
-
-
-function modularZeroPaddArray(prePadArray, border){  // buffer should be input tile radius
-
-    var ppa = prePadArray
-    var b   = border  // size of padding
-    
-    // 9 parts, original array in center, 4 sides, 4 corners
-    /*
-    var botSlice   = ppa.slice([ppa.shape[0]-b,ppa.shape[0]])
-    var topSlice   = ppa.slice([             0,           b])
-    
-    var rightSlice = ppa.slice(null, [ppa.shape[1]-b,ppa.shape[1]])
-    var leftSlice  = ppa.slice(null, [             0,           b])
-    
-    var topLeftCor   = ppa.slice([             0,           b],[             0,           b])
-    var topRightCor  = ppa.slice([             0,           b],[ppa.shape[1]-b,ppa.shape[1]])
-    var botLeftCor   = ppa.slice([ppa.shape[0]-b,ppa.shape[0]],[             0,           b])
-    var botRightCor  = ppa.slice([ppa.shape[0]-b,ppa.shape[0]],[ppa.shape[1]-b,ppa.shape[1]])*/
-    
-    var top  = nj.zeros([b, ppa.shape[1] + b*2])  // I think x might actually be [1] and y might be [0]
-    var bot  = nj.zeros([b, ppa.shape[1] + b*2])  // I think x might actually be [1] and y might be [0]
-    
-    var left = nj.zeros([ppa.shape[0], b])
-    var right = nj.zeros([ppa.shape[0], b])
-    
-    //var topPad = nj.concatenate( nj.concatenate( botRightCor, botSlice), botLeftCor)
-    var midPad = nj.concatenate( nj.concatenate(   left,      ppa), right) 
-    //var botPad = nj.concatenate( nj.concatenate( topRightCor, topSlice), topLeftCor) 
-    
-    var padded  = nj.concatenate(nj.concatenate(top.T, midPad.T), bot.T).T
-    
-    return padded ////console.log(padded)
+    var left_pad  = partial.slice([0,partial.shape[1] - b],[partial.shape[0],b])
+     
+    var right_pad = partial.slice([0,0],[partial.shape[0],b])
+  
+    return tf.concat([left_pad, partial, right_pad], axis = 1) ////console.log(padded)
 
 }
 
@@ -121,7 +76,7 @@ function setPix(x, y, r, g, b){
 
 }
 
-function applyRule1(readFrame, template){
+function applyRule1(readFrame, filter){
 
     //var border = (template.shape[0] -1) / 2
     
@@ -131,91 +86,35 @@ function applyRule1(readFrame, template){
     //console.log(paddedReadFrame.shape)
     //console.log(template.shape)
     
-    return tf.conv2d(readFrame, template, [1,1],'same')
+    var padded = modularPaddArray(readFrame, filter)
+    
+    readFrame.assign(tf.conv2d(padded, filter, [1,1],'valid'))
 
 }
 
 function applyRule2(frame, modList){
 
-    // going to do this the slow way because maybe that is fast enough
-    // numjs can't do this vectorized, maybe math.js can but we can use that if we need it
+    for(var i = 0; i < modList.length; i++){
     
-    var s0 = frame.shape[0]
-    var s1 = frame.shape[1]
-    
-    //for(var i = 0; i = modList.length; i++){
-    
-    //console.log("undefined?")
-   
-    list = frame.tolist()
-   
-    //console.log(list)
-   
-    list = math.round(list)
-    
-    frame = nj.array(list)
-   
-    //console.log(frame.shape)
-   
-    ////console.log(list[76/2][76/2])
-    
-    ////console.log(frame)
-    
-    //frame = frame.mod(2)
-   
-    
-    var keepCells = frame.mod(2)
-    frame = frame.multiply(keepCells)
-    
-    
-    //for(var i = 0; i < 76; i++){
-    //    for (var j = 0; j < 76; j++){
+        // we can do more interesting colorations if the mod is 2
+        // because we can multiply the remainders with the original numbers without messing them up
+        if(modList[i] == 2){
         
-    //        if(list[i][j] > 3355443){
-            
-                //console.log("" + i.toString() + " , " + j.toString())
-           
-            
-    //        }
+            frame.assign(frame.mul(frame.mod(tf.scalar(2))))
+            frame.assign(frame.mod(tf.scalar(65536)))  // this solves some of the overflow problems
+         
         
-    //    }
-    
-    
-    //}
-    
-    frame = frame.mod(65536)
-    
-    //frame = frame.add(keepCells.multiply(2))
-    
-    list = frame.tolist()
-    
-    //console.log("after mod")
-    
-    //for(var i = 0; i < 76; i++){
-    //    for (var j = 0; j < 76; j++){
+        }
+        else{
         
-           // if(list[i][j] > 3355443){
-            
-                //console.log("" + i.toString() + " , " + j.toString())
-           
-            
-    //        }
-    //    }
+            frame.assign(frame.mod(tf.scalar(modList[i])))
     
-    //}
+        }
     
-    //}
-    //frame
     
-    //copyList = frame.tolist()
-    
-    //result = math.mod(copyList, 2)
-    
-    //frame = nj.array(result)
-    
-    ////console.log(frame)
-    
-    return frame
+    }
+
+   return frame
  
 }
 
@@ -245,14 +144,14 @@ var values = new Array(frameSize * frameSize).fill(0);
 
 var startValue = 1  // maybe allow this to be changed later
 
-values[Math.floor(frameSize/2)* Math.floor(frameSize/2)] = startValue
+values[Math.floor(frameSize*frameSize/2)] = startValue
 
 //console.log( Math.floor(frameSize/2))
 console.log( values[Math.floor(frameSize/2)*Math.floor(frameSize/2)])
 
 const frame1Init = tf.tensor(values, [frameSize,frameSize,1])
 
-var frame1 = tf.variable(frame1Init)
+const frame1 = tf.variable(frame1Init)
 
 frame1.print()
 
@@ -269,18 +168,25 @@ frame1.print()
 
 //template = nj.concatenate(nj.concatenate(templateTop, template), templateBot)
 
-//tempalte = template.multiply(3)
                         
 //console.log(template.shape)
 
 var filterValues = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
                         
-var template = tf.tensor2d(filterValues,[5,5,1,1])//nj.array([[1,0,0,0,1],[0,0,2,0,0],[0,2,1,2,0],[0,0,2,0,0],[1,0,0,0,1]])
+const template3  = tf.variable(tf.zeros([ 3, 3,1,1]))
+const template5  = tf.variable(tf.zeros([ 5, 5,1,1]))
+const template7  = tf.variable(tf.zeros([ 7, 7,1,1]))
+const template9  = tf.variable(tf.zeros([ 9, 9,1,1]))
+const template11 = tf.variable(tf.zeros([11,11,1,1]))
+
+var templateList = [template3, template5, template7, template9, template11]
+
+var whichTempate = 1  // 0 -> 3, 1 -> 5, 2 -> 7, 3 -> 9, 4 -> 11  thats about as close to making sense as this will get I think
+
 var modList  = [2]
 
-var gridSize = 5
 
-setPatternGridSize(template.shape[0])
+setPatternGridSize(templateList[whichTempate].shape[0])
 
 ctx.fillStyle = 'rgb(0,0,0)';
 
@@ -317,44 +223,153 @@ ctx2.fillRect(360, 40, 40, 40)
 
 function setPatternGridSize(size){
 
-    resetGrid()
+    // 0 -> 3, 1 -> 5, 2 -> 7, 3 -> 9, 4 -> 11  
 
+    var targetTemplate = Math.floor(size / 2) - 1
+
+    var gridSize = (whichTempate+1) * 2 + 1
+
+    //console.log(targetTemplate)
+    //console.log(whichTempate)
+    
+   // console.log(templateList[targetTemplate].shape)
+    //console.log(templateList[targetTemplate].print())
+    
+    console.log(size)
+    
+    console.log(gridSize)
+    
     if(size > gridSize){
     
+        console.log("size > gridsize")
+        
         var diff = (size - gridSize)/2
+        
+        console.log(diff)
+        
+        console.log(templateList[whichTempate].shape)
+        
+        templateList[whichTempate].pad([[diff,diff],[diff,diff],[0,0],[0,0]]).print()
+        
+        console.log("test")
+        
+        //console.log(templateList[whichTempate].pad([diff,diff],[diff,diff]).shape)
     
-        template = modularZeroPaddArray(template, diff)
+        //templateList[targetTemplate].assign(templateList[whichTempate].pad([diff,diff],[diff,diff]))
     
     }
     
     if(size < gridSize){
     
-        template = template.slice([diff, gridSize-diff],[diff,gridSize-diff])
+        var diff = (gridSize - size)/2
+    
+        //console.log(diff)
+        //console.log(gridSize)
+    
+        //templateList[whichTempate].print()
+        
+        //templateList[whichTempate].slice([diff, diff],[gridSize-diff*2,gridSize-diff*2]).print()
+    
+        templateList[targetTemplate].assign(templateList[whichTempate].slice([diff, diff],[gridSize-diff*2,gridSize-diff*2]))
     
     }
     
+    whichTempate = targetTemplate
     
-    gridSize = size
+    //console.log(whichTempate)
     
+    //templateList[whichTempate].print()
+    
+    displayTemplateGrid()
+
+}
+
+function displayTemplateGrid(){
+
+    resetGrid()  // just graphics here no matrix stuff
+    var gridSize = (whichTempate+1) * 2 + 1
+
     var space = frame2Size - 240
 
     var gridStride = Math.floor(space / gridSize)
     
-    //var list = template.tolist()
+    var JSarray = templateList[whichTempate].dataSync()
     
-    ctx2.font= (gridStride-4).toString()+ "px Arial";
+    for(var j = 0; j < gridSize; j++){
+        for(var i = 0; i < gridSize; i++){
     
-        ctx2.fillText("ABC",120,120)
+            //ctx2.fillText(list[i][j].toString(), i*gridStride, j*gridStride)
+            
+            if(JSarray[(gridSize-1-j)*gridSize+(gridSize-1-i)] == 1){
+                ctx2.fillRect(i*gridStride + 120 + 2, j*gridStride+120 + 2, gridStride - 2, gridStride - 2)
+            }
+            else{
+                ctx2.fillRect(i*gridStride + 120 + 2, j*gridStride+120 + 2, gridStride - 2, gridStride - 2)
+                ctx2.fillStyle = 'rgb(255,255,255)';
+                ctx2.fillRect(i*gridStride + 120 + 8, j*gridStride+120 + 8, gridStride - 14, gridStride - 14)
+                ctx2.fillStyle = 'rgb(0,0,0)';
+            }
+        }
+    }
     
-    //ctx.fillText("Hello World",10,50);
-    
+
+}
+
+function flipTemplateBit(Ypix, Xpix){
+
+    var gridSize = (whichTempate+1) * 2 + 1
+    var space = frame2Size - 240
+    var gridStride = Math.floor(space / gridSize)
+
     for(var i = 0; i < gridSize; i++){
         for(var j = 0; j < gridSize; j++){
     
-            //ctx2.fillText(list[i][j].toString(), i*gridStride, j*gridStride)
-            //ctx2.fillRect(i*gridStride + 120 + 2, j*gridStride+120 + 2, gridStride - 2, gridStride - 2)
+            if(Xpix > (i*gridStride + 120 + 2)
+                && Xpix <  ((i+1)*gridStride + 120 + 2)
+                && Ypix >  ((j)*gridStride + 120 + 2)
+                && Ypix <  ((j+1)*gridStride + 120 + 2)){
+            
+                    //console.log("ypix: " + Ypix.toString() + " xpix: " + Xpix.toString())
+                    //console.log(i)
+                    //console.log(j)
+                    
+                    flipTemplateBit2((gridSize-1-j),(gridSize-1-i))
+            }
         }
     }
+    
+    displayTemplateGrid()
+
+}
+
+function flipTemplateBit2(y,x){
+
+    console.log("flipTemplateBit2 y:" + y.toString() + " x: " + x.toString())
+
+    var filterList = new Array(templateList[whichTempate].shape[0] * templateList[whichTempate].shape[1]).fill(0)
+    
+    console.log(templateList[whichTempate].shape)
+    
+    var TemplateDim1 = templateList[whichTempate].shape[0]
+    var TemplateDim2 = templateList[whichTempate].shape[1]
+    
+    filterList[y*templateList[whichTempate].shape[1]+x] = 1
+
+    console.log("1")
+    
+    templateList[whichTempate].print()
+    
+    console.log("2")
+    
+    tf.tensor(filterList,[TemplateDim1,TemplateDim2,1,1]).print()
+    
+    console.log("3")
+    
+    templateList[whichTempate].add(tf.tensor(filterList,[TemplateDim1,TemplateDim2,1,1])).print()
+    
+    tf.mod(templateList[whichTempate].add(tf.tensor(filterList,[TemplateDim1,TemplateDim2,1,1])),tf.scalar(2)).print()
+    
+    templateList[whichTempate].assign(tf.mod(templateList[whichTempate].add(tf.tensor(filterList,[TemplateDim1,TemplateDim2,1,1])),tf.scalar(2)))
 
 }
 
@@ -379,14 +394,8 @@ function display (frame1){
                       frame1.div(scalar4).mod(scalar256).div(scalar256),
                       frame1.mod(scalar256).div(scalar256)],2))
                       
-    //console.log(displayVar.shape)
-                   
-    //var color1 = frame1.div(scalar2).mod(scalar256).div(scalar256)
-    //var color2 = frame1.div(scalar3).mod(scalar256).div(scalar256)
-    //var color3 = frame1.mod(scalar256).div(scalar256)
     
     tf.toPixels(displayVar, canvas)
-    
 
 
 }
@@ -395,21 +404,11 @@ document.getElementById("container").addEventListener('click', function(event) {
 
     //frame1.print()
     //template.print()
-
-    frame1.assign(applyRule1(frame1, template))
-    frame1.assign(applyRule2(frame1))
-    
-    //frame1.print()
-    //template.print()
-    
-    display(frame1)
-    
     
 
-    
     //tf.toPixels(frame1, canvas)
     
-    /*
+    
     var canvas1Left = canvas.offsetLeft;
     var canvas1Top  = canvas.offsetTop;
     
@@ -418,22 +417,27 @@ document.getElementById("container").addEventListener('click', function(event) {
     
     if(pixY1 >= 0 && pixY1 <= frameSize){
 
-        frame1 = applyRule1(frame1, template)
-        frame1 = applyRule2(frame1, modList)
-        display(frame1)
-        console.log("done")
+        // these functions both assign the new value to frame1 so they don't need to return anything
+        tf.tidy(() => {
+            applyRule1(frame1, templateList[whichTempate])
+            applyRule2(frame1, modList)
+    
+            //frame1.print()
+            //template.print()
+    
+            display(frame1)
+    
+        });
     }
-
-    var canvas2Left = canvas2.offsetLeft;
-    var canvas2Top  = canvas2.offsetTop;
+    else{
     
-    var pixX2 = event.pageX - canvas2Left;
-    var pixY2 = event.pageY - canvas2Top;
+        var canvas2Left = canvas2.offsetLeft;
+        var canvas2Top  = canvas2.offsetTop;
     
-    console.log(pixX2)
-    console.log(pixY2)
+        var pixX2 = event.pageX - canvas2Left;
+        var pixY2 = event.pageY - canvas2Top;
     
-    if(pixY2 >= 40 && pixY2 <= 80){
+        if(pixY2 >= 40 && pixY2 <= 80){
     
         if(mod(pixX2,80) >= 40){
         
@@ -442,10 +446,15 @@ document.getElementById("container").addEventListener('click', function(event) {
             setPatternGridSize(gridSize)
 
 
+            }
         }
-    
-    
-    }*/
+        
+        if(pixY2 >= 120){
+        
+            flipTemplateBit(pixY2, pixX2)
+        
+        }
+    }
     
 }); 
 
