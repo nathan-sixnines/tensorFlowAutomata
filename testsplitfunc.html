@@ -16,6 +16,8 @@ Your browser does not support the HTML5 canvas tag.</canvas>
 
 <script src="math.min.js" type="text/javascript">*/
 
+var displayPixelSize = 729
+
 var frameSize = 729
 var frame2Size = 729
 
@@ -28,6 +30,11 @@ var ctx2    = canvas2.getContext("2d");
 var cellSize = 1
 
 var templateSize = 5
+
+var displayStride = 1
+var displayStartFrame  = 0
+
+var frameNum = 0
 
 function mod(n, m) {
         return ((n % m) + m) % m;
@@ -88,6 +95,10 @@ function applyRule1(readFrame, filter){
     
     var padded = modularPaddArray(readFrame, filter)
     
+    console.log(padded.shape)
+    
+    console.log("before conv")
+    
     readFrame.assign(tf.conv2d(padded, filter, [1,1],'valid'))
 
 }
@@ -114,10 +125,11 @@ function applyRule2(frame, modList){
     
     }
 
-   return frame
+   //return frame
  
 }
 
+/*
 function display(frame){
 
     var s0 = frame.shape[0]
@@ -132,7 +144,7 @@ function display(frame){
         }
     }
     
-}
+}*/
 
 
 //var frame1 = nj.zeros([frameSize,frameSize])
@@ -140,18 +152,18 @@ function display(frame){
 
 // https://stackoverflow.com/questions/34685947/adjust-single-value-within-tensor-tensorflow/34686952#34686952
 
-var values = new Array(frameSize * frameSize).fill(0);
+var values = new Array(displayPixelSize * displayPixelSize).fill(0);
 
 var startValue = 1  // maybe allow this to be changed later
 
-values[Math.floor(frameSize*frameSize/2)] = startValue
+values[Math.floor(displayPixelSize*displayPixelSize/2)] = startValue
 
 //console.log( Math.floor(frameSize/2))
-console.log( values[Math.floor(frameSize/2)*Math.floor(frameSize/2)])
+console.log( values[Math.floor(displayPixelSize/2)*Math.floor(displayPixelSize/2)])
 
-const frame1Init = tf.tensor(values, [frameSize,frameSize,1])
+//const frame1Init = tf.tensor(values, [displayPixelSize,displayPixelSize,1,1])
 
-const frame1 = tf.variable(frame1Init)
+const frame1 = tf.variable(tf.tensor(values, [displayPixelSize,displayPixelSize,1]))
 
 frame1.print()
 
@@ -172,12 +184,20 @@ frame1.print()
 //console.log(template.shape)
 
 var filterValues = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-                        
+ 
+/* 
 const template3  = tf.variable(tf.zeros([ 3, 3,1,1]))
 const template5  = tf.variable(tf.zeros([ 5, 5,1,1]))
 const template7  = tf.variable(tf.zeros([ 7, 7,1,1]))
 const template9  = tf.variable(tf.zeros([ 9, 9,1,1]))
 const template11 = tf.variable(tf.zeros([11,11,1,1]))
+*/
+
+const template3  = tf.variable(tf.ones([ 3, 3,1,1]))
+const template5  = tf.variable(tf.ones([ 5, 5,1,1]))
+const template7  = tf.variable(tf.ones([ 7, 7,1,1]))
+const template9  = tf.variable(tf.ones([ 9, 9,1,1]))
+const template11 = tf.variable(tf.ones([11,11,1,1]))
 
 var templateList = [template3, template5, template7, template9, template11]
 
@@ -190,7 +210,7 @@ setPatternGridSize(templateList[whichTempate].shape[0])
 
 ctx.fillStyle = 'rgb(0,0,0)';
 
-ctx.fillRect(0,0, frameSize, frameSize);
+ctx.fillRect(0,0, displayPixelSize, displayPixelSize);
 
 
 //console.log(template.shape)
@@ -373,13 +393,19 @@ function flipTemplateBit2(y,x){
 
 }
 
-const scalar2   = tf.scalar(2)
-const scalar4   = tf.scalar(4)
+
+const scalar16   = tf.scalar(16)
+const scalar32   = tf.scalar(32)
+const scalar64   = tf.scalar(64)
 const scalar256 = tf.scalar(256)
 
-const displayStart = tf.concat([tf.zerosLike(frame1),tf.zerosLike(frame1),tf.zerosLike(frame1)],2)
+//const displayStartValues1 = tf.concat([tf.zerosLike(frame1),tf.zerosLike(frame1),tf.zerosLike(frame1)],2)
 
-const displayVar = tf.variable(displayStart)
+const displayVar1 = tf.variable(tf.zeros([displayPixelSize,displayPixelSize,3]))
+
+//const displayStartValues2 = tf.concat([tf.zeros([frameSize, frameSize,1,1]),tf.zeros([frameSize, frameSize,1,1]),tf.zeros([frameSize, frameSize,1,1])],2)
+
+const displayVar2 = tf.variable(tf.zeros([frameSize,frameSize,3]))
 
 function display (frame1){
 
@@ -388,15 +414,25 @@ function display (frame1){
     //console.log(scalar4.dtype)
     //console.log(scalar256.dtype)
 
-    //console.log(frame1.shape)
+    console.log(frame1.shape)
     
-    displayVar.assign(tf.concat([frame1.div(scalar2).mod(scalar256).div(scalar256),
-                      frame1.div(scalar4).mod(scalar256).div(scalar256),
-                      frame1.mod(scalar256).div(scalar256)],2))
-                      
+    if(mod((frameNum + displayStartFrame),displayStride) == 0){
     
-    tf.toPixels(displayVar, canvas)
-
+        // multiply first to highlist colors
+        
+        console.log(displayVar1.shape)
+        console.log(frame1.shape)
+        
+    
+        displayVar1.assign(tf.concat([frame1.mul(scalar16).mod(scalar256).div(scalar256),
+                                     frame1.mul(scalar32).mod(scalar256).div(scalar256),
+                                     frame1.mul(scalar64).mod(scalar256).div(scalar256)],2))
+                                     
+        //displayVar2.assign(tf.image.resizeNearestNeighbor(displayVar1, [frameSize,frameSize]))
+        displayVar2.assign(tf.image.resizeBilinear(displayVar1, [frameSize,frameSize]))
+    
+        tf.toPixels(displayVar2, canvas)
+    }
 
 }
 
@@ -419,11 +455,18 @@ document.getElementById("container").addEventListener('click', function(event) {
 
         // these functions both assign the new value to frame1 so they don't need to return anything
         tf.tidy(() => {
+        
+            console.log(frame1.shape)
             applyRule1(frame1, templateList[whichTempate])
+            console.log(frame1.shape)
+            console.log("test1")
             applyRule2(frame1, modList)
-    
+            frameNum++
+            
             //frame1.print()
             //template.print()
+            
+            console.log("test2")
     
             display(frame1)
     
