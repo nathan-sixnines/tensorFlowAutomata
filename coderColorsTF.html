@@ -1,0 +1,399 @@
+<head>
+    <style>
+    
+    // Initial Stype provided by Nate Eagle @neagle
+    /* apply a natural box layout model to all elements, but allowing components to change */
+@import url("https://fonts.googleapis.com/css?family=Cutive+Mono");
+html {
+  box-sizing: border-box;
+}
+
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
+.big-ol-canvas {
+  background: purple;
+  width: 1235px;
+  height: 734px;
+}
+
+.RedControl {
+  background: rgba(128, 128, 128, 0.5);
+  padding: 0.5em;
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  width: 200px;
+}
+
+.GreControl {
+  background: rgba(128, 128, 128, 0.5);
+  padding: 0.5em;
+  position: fixed;
+  top: 200px;
+  right: 10px;
+  width: 200px;
+}
+
+.BluControl {
+  background: rgba(128, 128, 128, 0.5);
+  padding: 0.5em;
+  position: fixed;
+  top: 400px;
+  right: 10px;
+  width: 200px;
+}
+
+::-moz-selection {
+  background-color: red;
+}
+
+::selection {
+  background-color: red;
+}
+
+input {
+  background: rgba(255, 255, 255, 0.8);
+  font-family: 'Cutive Mono', monospace;
+}
+
+input[type="number"] {
+  background: #333333;
+  border: 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 36px;
+  font-weight: bold;
+  padding: 0.25em;
+  width: 100%;
+  margin-bottom: 5px;
+  outline: 0;
+  transition: background 0.2s;
+}
+input[type="number"]:focus {
+  background: #4d4d4d;
+}
+
+input[type="range"] {
+  width: 100%;
+}
+    
+    </style>
+</head>
+<body>
+<div id="container">
+<canvas id="myCanvas" width="768" height="768" style="border:1px solid #d3d3d3;">
+Your browser does not support the HTML5 canvas tag.</canvas>
+</div>
+
+<div class="RedControl">
+<button onclick="reSize()">Resize Canvas</button>
+
+<p>Red Divisor</p>
+<input type="text" id="RDiv" value="1" >
+<input type="range" id="RDivSlide" oninput="newRedDiv(this.value)" >
+</div>
+
+<div class="GreControl">
+
+<p>Green Divisor</p>
+<input type="text" id="GDiv" value="1" >
+<input type="range" id="GDivSlide" oninput="newGreDiv(this.value)" >
+</div>
+
+<div class="BluControl">
+
+<p>Blue Divisor</p>
+<input type="text" id="BDiv" value="1" >
+<input type="range" id="BDivSlide" oninput="newBluDiv(this.value)" >
+</div>
+
+
+ 
+</body>
+
+<script>
+
+/*<div>
+
+<p>Click the "Try it" button to get the text in the text field.</p>
+<input type="text" id="GDiv" value="2">
+<p>Click the "Try it" button to get the text in the text field.</p>
+<input type="text" id="BDiv" value="3">
+</div>
+*/
+
+console.log("test1")
+
+// css for div contaning inputs. position : fixed in css will keep input static
+// monospace fonts for number inputs
+
+//<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.10.0"> 
+
+
+
+//<script src="https://cdn.jsdelivr.net/gh/nicolaspanel/numjs@0.15.1/dist/numjs.min.js">
+
+/*<script type='text/javascript' src='E:\numjs_local\dist\numjs.js'>
+
+<script src="math.min.js" type="text/javascript">*/
+
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+
+var heightCanvas = getParameterByName('cH')
+var widthCanvas  = getParameterByName('cW')
+var heightPixels = getParameterByName('pH')
+var widthPixels  = getParameterByName('pW')
+
+var reload = false
+
+var defaultHeight = document.body.clientHeight
+var defaultWidth = document.body.clientWidth
+
+// load defaults if arguments are not provided
+if(heightCanvas == null){heightCanvas = defaultHeight; reload = true;}
+if(widthCanvas  == null){widthCanvas  = defaultWidth; reload = true;}
+if(heightPixels == null){heightPixels =  64; reload = true;}
+if(widthPixels  == null){widthPixels  =  64; reload = true;}
+
+console.log(getParameterByName('hC'))
+
+if(reload){
+
+    window.location.search += '&cH='+heightCanvas.toString()+'&cW='+widthCanvas.toString()+'&pH='+heightPixels.toString()+'&pW='+widthPixels.toString()
+
+}
+
+
+function reSize() {
+    var txt;
+    var vars = prompt("Edit numbers to reload canvas with new dimensions: \n <Canvas Height, Canvas Width, Active Cells Y, Active Cells X>", heightCanvas.toString() + ", " + widthCanvas.toString()+ ", " + heightPixels.toString()+ ", " + widthPixels.toString());
+    
+    varList = vars.split(',')
+    
+    var pass = false
+    
+    console.log(varList.length)
+    
+    console.log(!isNaN(varList[0]) && !isNaN(varList[1]) && !isNaN(varList[2]) && !isNaN(varList[3]))
+    
+    
+    if(varList.length == 4){
+    
+        console.log(varList)
+    
+        if(!isNaN(varList[0]) && !isNaN(varList[1]) && !isNaN(varList[2]) && !isNaN(varList[3])){
+        
+            console.log("pass number check")
+        
+            pass = true
+        
+        }
+    
+    }
+    
+    if (!pass) {
+        txt = "Invalid input, no changes made";
+    } else {
+        
+        heightCanvas = parseInt(varList[0])
+        widthCanvas  = parseInt(varList[1])
+        heightPixels = parseInt(varList[2])
+        widthPixels  = parseInt(varList[3])
+         
+        window.location.search = '&cH='+heightCanvas.toString()+'&cW='+widthCanvas.toString()+'&pH='+heightPixels.toString()+'&pW='+widthPixels.toString()
+        
+    }
+    //document.getElementById("demo").innerHTML = txt;
+}
+
+var canvas = document.getElementById("myCanvas");
+
+canvas.height = heightCanvas
+canvas.width  = widthCanvas
+
+var ctx    = canvas.getContext("2d");
+
+var cellSizeW = widthCanvas  / widthPixels
+var cellSizeH = heightCanvas / heightPixels
+
+
+//for(var i = 0; i < heightPixels; i++){
+//
+//    for(var j = 0; j < widthPixels; j++){
+//    
+//        ctx.fillStyle = "black"
+//    
+//        ctx.fillRect(j*Math.floor(widthCanvas/widthPixels),i*Math.floor(heightCanvas/heightPixels),(widthCanvas/widthPixels)-10,(heightCanvas/heightPixels)-10);
+//    
+//    }
+//
+//}
+
+
+
+var d1 = 1 //6.0000001
+var d2 = 1
+var d3 = 1//.9999999
+
+var s1 = true//true
+var s2 = true//false//true//true
+var s3 = true//false//true//true
+
+console.log(widthPixels)
+
+
+
+var matrixW = widthPixels
+var matrixH = heightPixels
+
+function mod(n, m) {
+        return ((n % m) + m) % m;
+}
+
+function setPix(x, y, r, g, b){
+
+
+    console.log("setpix")
+    
+    var xPix = x * cellSizeW;
+    var yPix = y * cellSizeH;
+
+    //console.log(cellSizeH)
+    //console.log(cellSizeW)
+    
+    console.log(x)
+    console.log(xPix)
+    console.log(y)
+    console.log(yPix)
+    
+    ctx.fillStyle = 'rgb(' + r + ',' + g + ',' + b + ')';
+    
+    ctx.fillRect(xPix, yPix , cellSizeW, cellSizeH);
+
+}
+
+function linspace (a, b, n) {
+  if (typeof n === 'undefined') n = Math.max(Math.round(b - a) + 1, 1)
+  if (n < 2) {
+    return n === 1 ? [a] : []
+  }
+  var i,ret = Array(n)
+  n--
+  for (i = n;i >= 0;i--) {
+    ret[i] = (i * b + (n - i) * a) / n
+  }
+  return ret
+}
+
+function drawCell(divisor1, divisor2, divisor3, sine1, sine2, sine3, value, i, j){
+
+    var r = null
+    var g = null
+    var b = null
+
+    if(sine1){
+        r = Math.floor(Math.abs(Math.sin(value / divisor1)) * 255)
+    }else{
+        r = Math.floor(mod(value / divisor1, 256))
+    }
+    
+    if(sine2){
+        g = Math.floor(Math.abs(Math.sin(value / divisor2)) * 255)
+    }else{
+        g = Math.floor(mod(value / divisor2, 256))
+    }    
+
+    if(sine3){
+        b = Math.floor(Math.abs(Math.sin(value / divisor3)) * 255)
+    }else{
+        b = Math.floor(mod(value / divisor3, 256))
+    }
+    
+    setPix(j, i, r, g, b)
+    
+    
+}
+
+
+
+function colors( divisor1, divisor2, divisor3, sine1, sine2, sine3, matrix){
+
+   console.log("colors")
+   console.log(widthPixels)
+   //console.log(widthPixels)  
+    
+   for(var i = 0; i < heightPixels; i++){
+        for(var j = 0; j< widthPixels; j++){
+        
+            //console.log(i*widthPixels + j)
+            //console.log(matrix[i*widthPixels + j])
+        
+            drawCell(divisor1, divisor2, divisor3, sine1, sine2, sine3, matrix[i*widthPixels + j], i, j)
+            
+        }
+   }
+
+}
+
+var m = new Array(widthPixels * heightPixels).fill(0);
+
+for (var i = 0; i < widthPixels * heightPixels; i++){
+    console.log(i)
+    m[i] = i
+
+}
+console.log("test2")
+
+function newRedDiv(newRedVal){
+
+    var textbox = document.getElementById('RDiv');
+
+    d1 = newRedVal
+    textbox.value = d1
+    colors(d1, d2, d3, s1, s2, s3, m)
+
+}
+
+function newGreDiv(newGreVal){
+
+    var textbox = document.getElementById('GDiv');
+
+    d2 = newGreVal
+    textbox.value = d2
+    colors(d1, d2, d3, s1, s2, s3, m)
+
+}
+
+function newBluDiv(newBluVal){
+
+    var textbox = document.getElementById('BDiv');
+
+    d3 = newBluVal
+    textbox.value = d3
+    colors(d1, d2, d3, s1, s2, s3, m)
+
+}
+
+
+
+colors(d1, d2, d3, s1, s2, s3, m)
+
+
+
+
+/*
+console.log("done")
+
+
+*/
+
+</script>

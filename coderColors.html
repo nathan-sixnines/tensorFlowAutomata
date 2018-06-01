@@ -1,0 +1,149 @@
+<div id="container">
+<canvas id="myCanvas" width="768" height="768" style="border:1px solid #d3d3d3;">
+Your browser does not support the HTML5 canvas tag.</canvas>
+
+</div>
+
+<script>
+
+
+
+console.log("test1")
+
+//<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.10.0"> 
+
+
+
+//<script src="https://cdn.jsdelivr.net/gh/nicolaspanel/numjs@0.15.1/dist/numjs.min.js">
+
+/*<script type='text/javascript' src='E:\numjs_local\dist\numjs.js'>
+
+<script src="math.min.js" type="text/javascript">*/
+
+var displayPixelsW = 640
+var cellSize = 1
+
+var frameSize = displayPixelsW * cellSize
+
+var canvas = document.getElementById("myCanvas");
+var ctx    = canvas.getContext("2d");
+
+
+var d1 = 16.0000001
+var d2 = 16
+var d3 = 15.9999999
+
+var s1 = true//true
+var s2 = true//true
+var s3 = true//true
+
+console.log(displayPixelsW)
+
+
+
+var matrixH = displayPixelsW
+var matrixW = displayPixelsW
+
+function mod(n, m) {
+        return ((n % m) + m) % m;
+}
+
+function setPix(x, y, r, g, b){
+
+
+    console.log("setpix")
+
+    var xPix = x * cellSize;
+    var yPix = y * cellSize;
+
+    ctx.fillStyle = 'rgb(' + r + ',' + g + ',' + b + ')';
+    
+    ctx.fillRect(xPix, yPix , cellSize, cellSize);
+
+}
+
+function linspace (a, b, n) {
+  if (typeof n === 'undefined') n = Math.max(Math.round(b - a) + 1, 1)
+  if (n < 2) {
+    return n === 1 ? [a] : []
+  }
+  var i,ret = Array(n)
+  n--
+  for (i = n;i >= 0;i--) {
+    ret[i] = (i * b + (n - i) * a) / n
+  }
+  return ret
+}
+
+function drawCell(divisor1, divisor2, divisor3, sine1, sine2, sine3, value, i, j){
+
+    var r = null
+    var g = null
+    var b = null
+
+    if(sine1){
+        r = Math.floor(Math.sin(value / divisor1) * 255)
+    }else{
+        r = Math.floor(mod(value / divisor1, 256))
+    }
+    
+    if(sine2){
+        g = Math.floor(Math.sin(value / divisor2) * 255)
+    }else{
+        g = Math.floor(mod(value / divisor2, 256))
+    }    
+
+    if(sine3){
+        b = Math.floor(Math.sin(value / divisor3) * 255)
+    }else{
+        b = Math.floor(mod(value / divisor3, 256))
+    }
+    
+    setPix(j, i, r, g, b)
+    
+    
+}
+
+
+
+function colors( divisor1, divisor2, divisor3, sine1, sine2, sine3, matrix){
+
+   console.log("colors")
+   console.log(displayPixelsW)
+   //console.log(displayPixelsW)  
+    
+   for(var i = 0; i < displayPixelsW; i++){
+        for(var j = 0; j< displayPixelsW; j++){
+        
+            //console.log(i*displayPixelsW + j)
+            //console.log(matrix[i*displayPixelsW + j])
+        
+            drawCell(divisor1, divisor2, divisor3, sine1, sine2, sine3, matrix[i*displayPixelsW + j], i, j)
+            
+        }
+   }
+
+}
+
+var m = new Array(displayPixelsW * displayPixelsW).fill(0);
+
+for (var i = 0; i < displayPixelsW * displayPixelsW; i++){
+    console.log(i)
+    m[i] = i
+
+}
+console.log("test2")
+
+
+
+
+colors(d1, d2, d3, s1, s2, s3, m)
+
+
+/*
+console.log("done")
+
+
+*/
+
+</script>
