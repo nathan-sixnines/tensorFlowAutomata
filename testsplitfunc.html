@@ -1,5 +1,5 @@
 <div id="container">
-<canvas id="myCanvas" width="729" height="729" style="border:1px solid #d3d3d3;">
+<canvas id="myCanvas" width="1500" height="1500" style="border:1px solid #d3d3d3;">
 Your browser does not support the HTML5 canvas tag.</canvas>
 
 <canvas id="myCanvas2" width="729" height="729" style="border:1px solid #d3d3d3;">
@@ -16,9 +16,9 @@ Your browser does not support the HTML5 canvas tag.</canvas>
 
 <script src="math.min.js" type="text/javascript">*/
 
-var displayPixelSize = 729
+var displayPixelSize = 1701
 
-var frameSize = 729
+var frameSize = 1701
 var frame2Size = 729
 
 var canvas = document.getElementById("myCanvas");
@@ -31,8 +31,10 @@ var cellSize = 1
 
 var templateSize = 5
 
-var displayStride = 1
-var displayStartFrame  = 0
+var displayStride = 8
+var calcBatch = 0     // keep track of what frame until next delay
+
+var displayStartFrame  = 1
 
 var frameNum = 0
 
@@ -105,6 +107,11 @@ function applyRule1(readFrame, filter){
 
 function applyRule2(frame, modList){
 
+
+// https://js.tensorflow.org/api/0.6.1/#clipByValue
+
+// with clipby value I can have more mods!
+
     for(var i = 0; i < modList.length; i++){
     
         // we can do more interesting colorations if the mod is 2
@@ -113,6 +120,7 @@ function applyRule2(frame, modList){
         
             frame.assign(frame.mul(frame.mod(tf.scalar(2))))
             frame.assign(frame.mod(tf.scalar(65536)))  // this solves some of the overflow problems
+            //frame.assign(frame.mod(tf.scalar(4096)))  // this solves some of the overflow problems
          
         
         }
@@ -197,9 +205,12 @@ const template3  = tf.variable(tf.ones([ 3, 3,1,1]))
 const template5  = tf.variable(tf.ones([ 5, 5,1,1]))
 const template7  = tf.variable(tf.ones([ 7, 7,1,1]))
 const template9  = tf.variable(tf.ones([ 9, 9,1,1]))
-const template11 = tf.variable(tf.ones([11,11,1,1]))
+const template11 = tf.variable(tf.zeros([11,11,1,1]))
+const template13 = tf.variable(tf.zeros([13,13,1,1]))
+const template15 = tf.variable(tf.zeros([15,15,1,1]))
+const template17 = tf.variable(tf.ones([17,17,1,1]))
 
-var templateList = [template3, template5, template7, template9, template11]
+var templateList = [template3, template5, template7, template9, template11, template13, template15, template17]
 
 var whichTempate = 1  // 0 -> 3, 1 -> 5, 2 -> 7, 3 -> 9, 4 -> 11  thats about as close to making sense as this will get I think
 
@@ -230,12 +241,20 @@ ctx2.fillRect(0, 0, frame2Size, frame2Size)
 
 ctx2.fillStyle = 'rgb(0,0,0)';
 
-ctx2.fillRect(40, 40, 40, 40)
-ctx2.fillRect(120, 40, 40, 40)
-ctx2.fillRect(200, 40, 40, 40)
-ctx2.fillRect(280, 40, 40, 40)
-ctx2.fillRect(360, 40, 40, 40)
+// template grid select buttons
+for(var i = 0; i < 8; i++){
+    ctx2.fillRect(40+80*i, 40, 40, 40)
+}
 
+ctx2.fillRect(40, frame2Size - 80, 80, 40)
+
+
+}
+
+function invertConvPattern(){
+
+    templateList[whichTempate].assign(templateList[whichTempate].add(tf.scalar(1)).mod(tf.scalar(2)))
+    displayTemplateGrid()
 
 }
 
@@ -414,28 +433,147 @@ function display (frame1){
     //console.log(scalar4.dtype)
     //console.log(scalar256.dtype)
 
-    console.log(frame1.shape)
+    //console.log(frame1.shape)
     
-    if(mod((frameNum + displayStartFrame),displayStride) == 0){
+    console.log(frameNum)
+    
+    console.log(mod((frameNum + displayStartFrame - displayStride),displayStride)) 
+    
+    if(mod(frameNum,displayStride)  == displayStartFrame || displayStride == 1){
     
         // multiply first to highlist colors
         
-        console.log(displayVar1.shape)
-        console.log(frame1.shape)
+        console.log("displaying")
+        
+        //console.log(displayVar1.shape)
+        //console.log(frame1.shape)
         
     
         displayVar1.assign(tf.concat([frame1.mul(scalar16).mod(scalar256).div(scalar256),
                                      frame1.mul(scalar32).mod(scalar256).div(scalar256),
                                      frame1.mul(scalar64).mod(scalar256).div(scalar256)],2))
                                      
-        //displayVar2.assign(tf.image.resizeNearestNeighbor(displayVar1, [frameSize,frameSize]))
-        displayVar2.assign(tf.image.resizeBilinear(displayVar1, [frameSize,frameSize]))
+        
+        displayVar2.assign(tf.image.resizeNearestNeighbor(displayVar1, [frameSize,frameSize]))
+        //displayVar2.assign(tf.image.resizeBilinear(displayVar1, [frameSize,frameSize]))
     
-        tf.toPixels(displayVar2, canvas)
+        tf.toPixels(displayVar2, canvas).then(function(){
+        
+            ctx.font = Math.floor(frameSize/15).toString() + "px Arial"
+            ctx.fillStyle = "white"
+            ctx.fillText(frameNum.toString() , canvas.width- canvas.width*(19/20), canvas.height - canvas.height*(1/20));})
     }
+    
+    
 
 }
 
+function clearFrame(){
+
+    tf.tidy(() => {
+    frame1.assign(tf.tensor(values, [displayPixelSize,displayPixelSize,1]))
+    frameNum = 0
+    display(frame1)
+    })
+
+}
+
+document.onkeydown = function(e) {
+    switch (e.keyCode) {
+        case 8:
+        
+            clearFrame()
+            break
+    
+        case 87:
+        
+            console.log("w key pressed")
+            console.log(frameNum)
+            
+            if(displayStride != 1){
+            
+                
+                while(true){
+            
+                    console.log(frameNum)
+            
+                    console.log(mod(frameNum,displayStride)) 
+    
+                    if(mod(frameNum,displayStride) + 1  == displayStartFrame){
+    
+                        tf.tidy(() => {
+                
+                            console.log(frame1.shape)
+                            applyRule1(frame1, templateList[whichTempate])
+                            console.log(frame1.shape)
+                            //console.log("test1")
+                            applyRule2(frame1, modList)
+                            frameNum++
+            
+                            //frame1.print()
+                            //template.print()
+                            console.log(frameNum)
+                    
+                            console.log("disp loop")
+    
+                            display(frame1)
+                        
+    
+                        });
+                    
+                        break
+            
+                    }
+                    else{
+            
+                        tf.tidy(() => {
+                
+                            console.log(frame1.shape)
+                            applyRule1(frame1, templateList[whichTempate])
+                            console.log(frame1.shape)
+                            //console.log("test1")
+                            applyRule2(frame1, modList)
+                            frameNum++
+            
+                            //frame1.print()
+                            //template.print()
+            
+                            console.log("process loop")
+    
+                        });
+            
+                    }
+                
+                }
+                
+            }
+                
+            else{
+                
+                    tf.tidy(() => {
+                    
+                        console.log(frame1.shape)
+                        applyRule1(frame1, templateList[whichTempate])
+                        console.log(frame1.shape)
+                        //console.log("test1")
+                        applyRule2(frame1, modList)
+                        frameNum++
+            
+                        //frame1.print()
+                        //template.print()
+                        console.log(frameNum)
+                    
+                        console.log("disp loop")
+    
+                        display(frame1)
+                        
+                    });
+                
+            }
+            break
+    }
+}
+        
 document.getElementById("container").addEventListener('click', function(event) {
 
     //frame1.print()
@@ -451,42 +589,29 @@ document.getElementById("container").addEventListener('click', function(event) {
     var pixX1 = event.pageX - canvas1Left;
     var pixY1 = event.pageY - canvas1Top;
     
-    if(pixY1 >= 0 && pixY1 <= frameSize){
+    var canvas2Left = canvas2.offsetLeft;
+    var canvas2Top  = canvas2.offsetTop;
+    
+    var pixX2 = event.pageX - canvas2Left;
+    var pixY2 = event.pageY - canvas2Top;
+    
+    
+    //if(pixY1 >= 0 && pixY1 <= frameSize){
 
         // these functions both assign the new value to frame1 so they don't need to return anything
-        tf.tidy(() => {
-        
-            console.log(frame1.shape)
-            applyRule1(frame1, templateList[whichTempate])
-            console.log(frame1.shape)
-            console.log("test1")
-            applyRule2(frame1, modList)
-            frameNum++
-            
-            //frame1.print()
-            //template.print()
-            
-            console.log("test2")
+
+    //}
+    //else{
     
-            display(frame1)
-    
-        });
-    }
-    else{
-    
-        var canvas2Left = canvas2.offsetLeft;
-        var canvas2Top  = canvas2.offsetTop;
-    
-        var pixX2 = event.pageX - canvas2Left;
-        var pixY2 = event.pageY - canvas2Top;
+
     
         if(pixY2 >= 40 && pixY2 <= 80){
     
-        if(mod(pixX2,80) >= 40){
+            if(mod(pixX2,80) >= 40){
         
-            var gridSize = 1+ 2 * (Math.floor(pixX2 / 80) + 1)
+                var gridSize = 1+ 2 * (Math.floor(pixX2 / 80) + 1)
         
-            setPatternGridSize(gridSize)
+                setPatternGridSize(gridSize)
 
 
             }
@@ -497,7 +622,13 @@ document.getElementById("container").addEventListener('click', function(event) {
             flipTemplateBit(pixY2, pixX2)
         
         }
-    }
+        
+        if(pixY2 > frame2Size - 80 && pixY2 < frame2Size - 40 && pixX2 > 40 && pixX2 < 120){
+        
+            invertConvPattern()
+        
+        }
+    //}
     
 }); 
 
