@@ -112,6 +112,8 @@ Your browser does not support the HTML5 canvas tag.</canvas>
  
 </body>
 
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.10.0"> </script>
+
 <script>
 
 /*<div>
@@ -148,10 +150,10 @@ function getParameterByName(name, url) {
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
 
-var heightCanvas = getParameterByName('cH')
-var widthCanvas  = getParameterByName('cW')
-var heightPixels = getParameterByName('pH')
-var widthPixels  = getParameterByName('pW')
+var heightCanvas = parseInt(getParameterByName('cH'))
+var widthCanvas  = parseInt(getParameterByName('cW'))
+var heightPixels = parseInt(getParameterByName('pH'))
+var widthPixels  = parseInt(getParameterByName('pW'))
 
 var reload = false
 
@@ -251,9 +253,11 @@ var s3 = true//false//true//true
 console.log(widthPixels)
 
 
+//var matrixW = widthPixels
+//var matrixH = heightPixels
 
-var matrixW = widthPixels
-var matrixH = heightPixels
+//console.log(matrixW * matrixH)
+//console.log(matrixH)
 
 function mod(n, m) {
         return ((n % m) + m) % m;
@@ -324,42 +328,62 @@ function drawCell(divisor1, divisor2, divisor3, sine1, sine2, sine3, value, i, j
 }
 
 
+var matrixH = heightPixels
+var matrixW = widthPixels
 
-function colors( divisor1, divisor2, divisor3, sine1, sine2, sine3, matrix){
+const m = tf.linspace(0, matrixH*matrixW-1, matrixH*matrixW).reshape([matrixH,matrixW,1]).log()
 
-   console.log("colors")
-   console.log(widthPixels)
-   //console.log(widthPixels)  
+
+const r = tf.variable(tf.zeros([matrixH, matrixW,1]))
+const g = tf.variable(tf.zeros([matrixH, matrixW,1]))
+const b = tf.variable(tf.zeros([matrixH, matrixW,1]))
+const displayVar1 = tf.variable(tf.zeros([matrixH, matrixW, 3]))
+const displayVar2 = tf.variable(tf.zeros([heightCanvas,widthCanvas,3]))
+
+const scalar256 = tf.scalar(256)
+
+//m.print()
+//console.log(m.shape)
+
+
+function display(){
+
+    console.log("displaying")
+        
     
-   for(var i = 0; i < heightPixels; i++){
-        for(var j = 0; j< widthPixels; j++){
+    //displayVar1.assign(tf.concat([m.mul(tf.scalar(factor1)).sin().abs(),m.mul(tf.scalar(factor2)).sin().abs(),m.mul(tf.scalar(factor3)).sin().abs()],2))
+    displayVar1.assign(tf.concat([r,g,b],2))
+                                     
         
-            //console.log(i*widthPixels + j)
-            //console.log(matrix[i*widthPixels + j])
+    displayVar2.assign(tf.image.resizeNearestNeighbor(displayVar1, [heightCanvas,widthCanvas]))
+    //displayVar2.assign(tf.image.resizeBilinear(displayVar1, [frameSize,frameSize]))
+    
+    tf.toPixels(displayVar2, canvas).then(function(){
         
-            drawCell(divisor1, divisor2, divisor3, sine1, sine2, sine3, matrix[i*widthPixels + j], i, j)
-            
-        }
-   }
-
+        //ctx.font = Math.floor(frameSize/15).toString() + "px Arial"
+        //ctx.fillStyle = "white"
+        //ctx.fillText(frameNum.toString() , canvas.width- canvas.width*(19/20), canvas.height - //canvas.height*(1/20));})
+    })
+   
 }
 
-var m = new Array(widthPixels * heightPixels).fill(0);
 
-for (var i = 0; i < widthPixels * heightPixels; i++){
-    console.log(i)
-    m[i] = i
 
-}
-console.log("test2")
+//var m = new Array(widthPixels * heightPixels).fill(0);
+
 
 function newRedDiv(newRedVal){
 
     var textbox = document.getElementById('RDiv');
-
+    
     d1 = newRedVal
+    
+    r.assign(m.mul(tf.scalar(d1)).mod(scalar256).div(scalar256))
+    
     textbox.value = d1
-    colors(d1, d2, d3, s1, s2, s3, m)
+    
+    display()
+    //colors(d1, d2, d3, s1, s2, s3, m)
 
 }
 
@@ -368,8 +392,10 @@ function newGreDiv(newGreVal){
     var textbox = document.getElementById('GDiv');
 
     d2 = newGreVal
+    
+    g.assign(m.mul(tf.scalar(d2)).mod(scalar256).div(scalar256))
     textbox.value = d2
-    colors(d1, d2, d3, s1, s2, s3, m)
+    display()
 
 }
 
@@ -378,15 +404,19 @@ function newBluDiv(newBluVal){
     var textbox = document.getElementById('BDiv');
 
     d3 = newBluVal
+    
+    b.assign(m.mul(tf.scalar(d3)).mod(scalar256).div(scalar256))
     textbox.value = d3
-    colors(d1, d2, d3, s1, s2, s3, m)
+    display()
 
 }
 
 
+newRedDiv(1)
+newGreDiv(1)
+newBluDiv(1)
 
-colors(d1, d2, d3, s1, s2, s3, m)
-
+display()
 
 
 
