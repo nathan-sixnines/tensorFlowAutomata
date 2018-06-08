@@ -423,6 +423,7 @@ function newRedDiv(newRedVal){
     var textbox = document.getElementById('RDiv');
     
     d1 = newRedVal
+
     if(sin1){
         if(scale1 == 0){
             r.assign(mLog.mul(tf.scalar(d1)).sin().abs())
@@ -445,6 +446,7 @@ function newRedDiv(newRedVal){
             r.assign(mSqua.mul(tf.scalar(d1)).mod(scalar256).div(scalar256))
         }        
     }
+
     textbox.value = d1
     
     display()
@@ -480,6 +482,7 @@ function newGreDiv(newGreVal){
             g.assign(mSqua.mul(tf.scalar(d2)).mod(scalar256).div(scalar256))
         }        
     }
+
     textbox.value = d2
     display()
 
