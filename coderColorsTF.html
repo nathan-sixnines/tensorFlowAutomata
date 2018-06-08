@@ -92,6 +92,19 @@ Your browser does not support the HTML5 canvas tag.</canvas>
 <p>Red Divisor</p>
 <input type="text" id="RDiv" value="1" >
 <input type="range" id="RDivSlide" oninput="newRedDiv(this.value)" >
+
+ <input type="radio" id="scaleChoiceRed1"
+     name="scaleChoiceRed" value="0">
+    <label for="scaleChoiceRed1">Log</label>
+
+    <input type="radio" id="scaleChoiceRed2"
+     name="scaleChoiceRed" value="1" checked>
+    <label for="scaleChoiceRed2">Linear</label>
+
+    <input type="radio" id="scaleChoiceRed3"
+     name="scaleChoiceRed" value="2">
+    <label for="scaleChoiceRed3">Exp</label>
+
 </div>
 
 <div class="GreControl">
@@ -99,6 +112,18 @@ Your browser does not support the HTML5 canvas tag.</canvas>
 <p>Green Divisor</p>
 <input type="text" id="GDiv" value="1" >
 <input type="range" id="GDivSlide" oninput="newGreDiv(this.value)" >
+
+ <input type="radio" id="scaleChoiceGre1"
+     name="scaleChoiceGre" value="0">
+    <label for="scaleChoiceGre1">Log</label>
+
+    <input type="radio" id="scaleChoiceGre2"
+     name="scaleChoiceGre" value="1" checked>
+    <label for="scaleChoiceGre2">Linear</label>
+
+    <input type="radio" id="scaleChoiceGre3"
+     name="scaleChoiceGre" value="2">
+    <label for="scaleChoiceGre3">Exp</label>
 </div>
 
 <div class="BluControl">
@@ -106,11 +131,25 @@ Your browser does not support the HTML5 canvas tag.</canvas>
 <p>Blue Divisor</p>
 <input type="text" id="BDiv" value="1" >
 <input type="range" id="BDivSlide" oninput="newBluDiv(this.value)" >
+
+ <input type="radio" id="scaleChoiceBlu1"
+     name="scaleChoiceBlu" value="0">
+    <label for="scaleChoiceBlu1">Log</label>
+
+    <input type="radio" id="scaleChoiceBlu2"
+     name="scaleChoiceBlu" value="1" checked>
+    <label for="scaleChoiceBlu2">Linear</label>
+
+    <input type="radio" id="scaleChoiceBlu3"
+     name="scaleChoiceBlu" value="2">
+    <label for="scaleChoiceBlu3">Exp</label>
 </div>
 
 
  
 </body>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.10.0"> </script>
 
 <script>
 
@@ -148,10 +187,10 @@ function getParameterByName(name, url) {
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
 
-var heightCanvas = getParameterByName('cH')
-var widthCanvas  = getParameterByName('cW')
-var heightPixels = getParameterByName('pH')
-var widthPixels  = getParameterByName('pW')
+var heightCanvas = parseInt(getParameterByName('cH'))
+var widthCanvas  = parseInt(getParameterByName('cW'))
+var heightPixels = parseInt(getParameterByName('pH'))
+var widthPixels  = parseInt(getParameterByName('pW'))
 
 var reload = false
 
@@ -159,10 +198,10 @@ var defaultHeight = document.body.clientHeight
 var defaultWidth = document.body.clientWidth
 
 // load defaults if arguments are not provided
-if(heightCanvas == null){heightCanvas = defaultHeight; reload = true;}
-if(widthCanvas  == null){widthCanvas  = defaultWidth; reload = true;}
-if(heightPixels == null){heightPixels =  64; reload = true;}
-if(widthPixels  == null){widthPixels  =  64; reload = true;}
+if(isNaN(heightCanvas)){heightCanvas = defaultHeight; reload = true;}
+if(isNaN(widthCanvas)){widthCanvas  = defaultWidth; reload = true;}
+if(isNaN(heightPixels)){heightPixels =  64; reload = true;}
+if(isNaN(widthPixels)){widthPixels  =  64; reload = true;}
 
 console.log(getParameterByName('hC'))
 
@@ -244,16 +283,22 @@ var d1 = 1 //6.0000001
 var d2 = 1
 var d3 = 1//.9999999
 
-var s1 = true//true
-var s2 = true//false//true//true
-var s3 = true//false//true//true
+var sin1 = true//true
+var sin2 = true//false//true//true
+var sin3 = true//false//true//true
+
+var scale1 = 0
+var scale2 = 0
+var scale3 = 0
 
 console.log(widthPixels)
 
 
+//var matrixW = widthPixels
+//var matrixH = heightPixels
 
-var matrixW = widthPixels
-var matrixH = heightPixels
+//console.log(matrixW * matrixH)
+//console.log(matrixH)
 
 function mod(n, m) {
         return ((n % m) + m) % m;
@@ -324,42 +369,86 @@ function drawCell(divisor1, divisor2, divisor3, sine1, sine2, sine3, value, i, j
 }
 
 
+var matrixH = heightPixels
+var matrixW = widthPixels
 
-function colors( divisor1, divisor2, divisor3, sine1, sine2, sine3, matrix){
+//console.log(matrixH*matrixW)
 
-   console.log("colors")
-   console.log(widthPixels)
-   //console.log(widthPixels)  
+const mLin  = tf.linspace(0, matrixH*matrixW-1, matrixH*matrixW).reshape([matrixH,matrixW,1])
+const mLog  = mLin.log1p()
+const mSqua = mLin.pow(tf.scalar(2))
+
+const r = tf.variable(tf.zeros([matrixH, matrixW,1]))
+const g = tf.variable(tf.zeros([matrixH, matrixW,1]))
+const b = tf.variable(tf.zeros([matrixH, matrixW,1]))
+const displayVar1 = tf.variable(tf.zeros([matrixH, matrixW, 3]))
+const displayVar2 = tf.variable(tf.zeros([heightCanvas,widthCanvas,3]))
+
+r.print()
+
+const scalar256 = tf.scalar(256)
+
+//m.print()
+//console.log(m.shape)
+
+
+function display(){
+
+    console.log("displaying")
+        
     
-   for(var i = 0; i < heightPixels; i++){
-        for(var j = 0; j< widthPixels; j++){
+    //displayVar1.assign(tf.concat([m.mul(tf.scalar(factor1)).sin().abs(),m.mul(tf.scalar(factor2)).sin().abs(),m.mul(tf.scalar(factor3)).sin().abs()],2))
+    displayVar1.assign(tf.concat([r,g,b],2))
+                                     
         
-            //console.log(i*widthPixels + j)
-            //console.log(matrix[i*widthPixels + j])
+    displayVar2.assign(tf.image.resizeNearestNeighbor(displayVar1, [heightCanvas,widthCanvas]))
+    //displayVar2.assign(tf.image.resizeBilinear(displayVar1, [frameSize,frameSize]))
+    
+    tf.toPixels(displayVar2, canvas).then(function(){
         
-            drawCell(divisor1, divisor2, divisor3, sine1, sine2, sine3, matrix[i*widthPixels + j], i, j)
-            
-        }
-   }
-
+        //ctx.font = Math.floor(frameSize/15).toString() + "px Arial"
+        //ctx.fillStyle = "white"
+        //ctx.fillText(frameNum.toString() , canvas.width- canvas.width*(19/20), canvas.height - //canvas.height*(1/20));})
+    })
+   
 }
 
-var m = new Array(widthPixels * heightPixels).fill(0);
 
-for (var i = 0; i < widthPixels * heightPixels; i++){
-    console.log(i)
-    m[i] = i
 
-}
-console.log("test2")
+//var m = new Array(widthPixels * heightPixels).fill(0);
+
 
 function newRedDiv(newRedVal){
 
     var textbox = document.getElementById('RDiv');
-
+    
     d1 = newRedVal
+    if(sin1){
+        if(scale1 == 0){
+            r.assign(mLog.mul(tf.scalar(d1)).sin().abs())
+        }
+        if(scale1 == 1){
+            r.assign(mLin.mul(tf.scalar(d1)).sin().abs())
+        }
+        if(scale1 == 2){
+            r.assign(mSqua.mul(tf.scalar(d1)).sin().abs())
+        }
+    }
+    else{
+        if(scale1 == 0){
+            r.assign(mLog.mul(tf.scalar(d1)).mod(scalar256).div(scalar256))
+        }
+        if(scale1 == 1){
+            r.assign(mLin.mul(tf.scalar(d1)).mod(scalar256).div(scalar256))
+        }
+        if(scale1 == 2){
+            r.assign(mSqua.mul(tf.scalar(d1)).mod(scalar256).div(scalar256))
+        }        
+    }
     textbox.value = d1
-    colors(d1, d2, d3, s1, s2, s3, m)
+    
+    display()
+    //colors(d1, d2, d3, s1, s2, s3, m)
 
 }
 
@@ -368,8 +457,31 @@ function newGreDiv(newGreVal){
     var textbox = document.getElementById('GDiv');
 
     d2 = newGreVal
+    
+    if(sin1){
+        if(scale1 == 0){
+            g.assign(mLog.mul(tf.scalar(d2)).sin().abs())
+        }
+        if(scale1 == 1){
+            g.assign(mLin.mul(tf.scalar(d2)).sin().abs())
+        }
+        if(scale1 == 2){
+            g.assign(mSqua.mul(tf.scalar(d2)).sin().abs())
+        }
+    }
+    else{
+        if(scale1 == 0){
+            g.assign(mLog.mul(tf.scalar(d2)).mod(scalar256).div(scalar256))
+        }
+        if(scale1 == 1){
+            g.assign(mLin.mul(tf.scalar(d2)).mod(scalar256).div(scalar256))
+        }
+        if(scale1 == 2){
+            g.assign(mSqua.mul(tf.scalar(d2)).mod(scalar256).div(scalar256))
+        }        
+    }
     textbox.value = d2
-    colors(d1, d2, d3, s1, s2, s3, m)
+    display()
 
 }
 
@@ -378,15 +490,40 @@ function newBluDiv(newBluVal){
     var textbox = document.getElementById('BDiv');
 
     d3 = newBluVal
+    
+    if(sin1){
+        if(scale1 == 0){
+            b.assign(mLog.mul(tf.scalar(d3)).sin().abs())
+        }
+        if(scale1 == 1){
+            b.assign(mLin.mul(tf.scalar(d3)).sin().abs())
+        }
+        if(scale1 == 2){
+            b.assign(mSqua.mul(tf.scalar(d3)).sin().abs())
+        }
+    }
+    else{
+        if(scale1 == 0){
+            b.assign(mLog.mul(tf.scalar(d3)).mod(scalar256).div(scalar256))
+        }
+        if(scale1 == 1){
+            b.assign(mLin.mul(tf.scalar(d3)).mod(scalar256).div(scalar256))
+        }
+        if(scale1 == 2){
+            b.assign(mSqua.mul(tf.scalar(d3)).mod(scalar256).div(scalar256))
+        }        
+    }
     textbox.value = d3
-    colors(d1, d2, d3, s1, s2, s3, m)
+    display()
 
 }
 
 
+newRedDiv(1)
+newGreDiv(1)
+newBluDiv(1)
 
-colors(d1, d2, d3, s1, s2, s3, m)
-
+display()
 
 
 
