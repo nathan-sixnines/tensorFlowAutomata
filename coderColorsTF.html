@@ -31,7 +31,7 @@ html {
   background: rgba(128, 128, 128, 0.5);
   padding: 0.5em;
   position: fixed;
-  top: 200px;
+  top: 230px;
   right: 10px;
   width: 200px;
 }
@@ -40,7 +40,7 @@ html {
   background: rgba(128, 128, 128, 0.5);
   padding: 0.5em;
   position: fixed;
-  top: 400px;
+  top: 430px;
   right: 10px;
   width: 200px;
 }
@@ -90,59 +90,92 @@ Your browser does not support the HTML5 canvas tag.</canvas>
 <button onclick="reSize()">Resize Canvas</button>
 
 <p>Red Divisor</p>
-<input type="text" id="RDiv" value="1" >
-<input type="range" id="RDivSlide" oninput="newRedDiv(this.value)" >
+<input type="text" id="RDivMin" value="1" onkeyup="newRedMin(this.value)" >
+<input type="text" id="RDiv" value="1" onkeyup="newRedDiv(this.value)" >
+<input type="text" id="RDivMax" value="100" onkeyup="newRedMax(this.value)">
+<input type="range" id="RDivSlide" value='1' oninput="newRedDiv(this.value)" >
 
- <input type="radio" id="scaleChoiceRed1"
+ <input type="radio" id="redRadio"
      name="scaleChoiceRed" value="0">
     <label for="scaleChoiceRed1">Log</label>
 
-    <input type="radio" id="scaleChoiceRed2"
+    <input type="radio" id="redRadio"
      name="scaleChoiceRed" value="1" checked>
     <label for="scaleChoiceRed2">Linear</label>
 
-    <input type="radio" id="scaleChoiceRed3"
+    <input type="radio" id="redRadio"
      name="scaleChoiceRed" value="2">
     <label for="scaleChoiceRed3">Exp</label>
+    
+ <input type="radio" id="redRadio2"
+     name="waveChoiceRed" value="0" checked>
+    <label for="waveChoiceRed1">Sine</label>
+
+    <input type="radio" id="redRadio2"
+     name="waveChoiceRed" value="1" >
+    <label for="waveChoiceRed2">Ramp (Mod)</label>
+
 
 </div>
 
 <div class="GreControl">
 
 <p>Green Divisor</p>
-<input type="text" id="GDiv" value="1" >
-<input type="range" id="GDivSlide" oninput="newGreDiv(this.value)" >
+<input type="text" id="GDivMin" value="1" onkeyup="newGreMin(this.value)" >
+<input type="text" id="GDiv" value="1" onkeyup="newGreDiv(this.value)" >
+<input type="text" id="GDivMax" value="100" onkeyup="newGreMax(this.value)" >
+<input type="range" id="GDivSlide" value='1' oninput="newGreDiv(this.value)" >
 
- <input type="radio" id="scaleChoiceGre1"
+ <input type="radio" id="greRadio"
      name="scaleChoiceGre" value="0">
     <label for="scaleChoiceGre1">Log</label>
 
-    <input type="radio" id="scaleChoiceGre2"
+    <input type="radio" id="greRadio"
      name="scaleChoiceGre" value="1" checked>
     <label for="scaleChoiceGre2">Linear</label>
 
-    <input type="radio" id="scaleChoiceGre3"
+    <input type="radio" id="greRadio"
      name="scaleChoiceGre" value="2">
     <label for="scaleChoiceGre3">Exp</label>
+   
+ <input type="radio" id="redRadio2"
+     name="waveChoiceGre" value="0" checked>
+    <label for="waveChoiceGre">Sine</label>
+
+    <input type="radio" id="redRadio2"
+     name="waveChoiceGre" value="1" >
+    <label for="waveChoiceGre">Ramp (Mod)</label>   
+   
 </div>
 
 <div class="BluControl">
 
 <p>Blue Divisor</p>
-<input type="text" id="BDiv" value="1" >
-<input type="range" id="BDivSlide" oninput="newBluDiv(this.value)" >
+<input type="text" id="BDivMin" value="1" onkeyup="newBluMin(this.value)" >
+<input type="text" id="BDiv" value="1"onkeyup="newBluDiv(this.value)" >
+<input type="text" id="BDivMax" value="100" onkeyup="newBluMax(this.value)" >
+<input type="range" id="BDivSlide" value='1' oninput="newBluDiv(this.value)" >
 
- <input type="radio" id="scaleChoiceBlu1"
+ <input type="radio" id="bluRadio"
      name="scaleChoiceBlu" value="0">
     <label for="scaleChoiceBlu1">Log</label>
 
-    <input type="radio" id="scaleChoiceBlu2"
+    <input type="radio" id="bluRadio"
      name="scaleChoiceBlu" value="1" checked>
     <label for="scaleChoiceBlu2">Linear</label>
 
-    <input type="radio" id="scaleChoiceBlu3"
+    <input type="radio" id="bluRadio"
      name="scaleChoiceBlu" value="2">
     <label for="scaleChoiceBlu3">Exp</label>
+    
+ <input type="radio" id="bluRadio2"
+     name="waveChoiceBlu" value="0" checked>
+    <label for="waveChoiceBlu">Sine</label>
+
+    <input type="radio" id="bluRadio2"
+     name="waveChoiceBlu" value="1" >
+    <label for="waveChoiceBlu">Ramp (Mod)</label>
+    
 </div>
 
 
@@ -287,9 +320,9 @@ var sin1 = true//true
 var sin2 = true//false//true//true
 var sin3 = true//false//true//true
 
-var scale1 = 0
-var scale2 = 0
-var scale3 = 0
+var scale1 = 1
+var scale2 = 1
+var scale3 = 1
 
 console.log(widthPixels)
 
@@ -416,7 +449,53 @@ function display(){
 
 
 //var m = new Array(widthPixels * heightPixels).fill(0);
+function newRedMin(minVal){
 
+ var range = document.getElementById("RDivSlide")
+ range.min = minVal
+ range.step = (range.max - range.min) / 100
+
+}
+
+function newGreMin(minVal){
+
+ var range = document.getElementById("GDivSlide")
+ range.min = minVal
+ range.step = (range.max - range.min) / 100
+
+}
+
+function newBluMin(minVal){
+
+ var range = document.getElementById("BDivSlide")
+ range.min = minVal
+ range.step = (range.max - range.min) / 100
+
+}
+
+function newRedMax(maxVal){
+
+ var range = document.getElementById("RDivSlide")
+ range.max = maxVal
+ range.step = (range.max - range.min) / 100
+
+}
+
+function newGreMax(maxVal){
+
+ var range = document.getElementById("GDivSlide")
+ range.max = maxVal
+ range.step = (range.max - range.min) / 100
+
+}
+
+function newBluMax(maxVal){
+
+ var range = document.getElementById("BDivSlide")
+ range.max = maxVal
+ range.step = (range.max - range.min) / 100
+
+}
 
 function newRedDiv(newRedVal){
 
@@ -460,25 +539,25 @@ function newGreDiv(newGreVal){
 
     d2 = newGreVal
     
-    if(sin1){
-        if(scale1 == 0){
+    if(sin2){
+        if(scale2 == 0){
             g.assign(mLog.mul(tf.scalar(d2)).sin().abs())
         }
-        if(scale1 == 1){
+        if(scale2 == 1){
             g.assign(mLin.mul(tf.scalar(d2)).sin().abs())
         }
-        if(scale1 == 2){
+        if(scale2 == 2){
             g.assign(mSqua.mul(tf.scalar(d2)).sin().abs())
         }
     }
     else{
-        if(scale1 == 0){
+        if(scale2 == 0){
             g.assign(mLog.mul(tf.scalar(d2)).mod(scalar256).div(scalar256))
         }
-        if(scale1 == 1){
+        if(scale2 == 1){
             g.assign(mLin.mul(tf.scalar(d2)).mod(scalar256).div(scalar256))
         }
-        if(scale1 == 2){
+        if(scale2 == 2){
             g.assign(mSqua.mul(tf.scalar(d2)).mod(scalar256).div(scalar256))
         }        
     }
@@ -494,31 +573,154 @@ function newBluDiv(newBluVal){
 
     d3 = newBluVal
     
-    if(sin1){
-        if(scale1 == 0){
+    if(sin3){
+        if(scale3 == 0){
             b.assign(mLog.mul(tf.scalar(d3)).sin().abs())
         }
-        if(scale1 == 1){
+        if(scale3 == 1){
             b.assign(mLin.mul(tf.scalar(d3)).sin().abs())
         }
-        if(scale1 == 2){
+        if(scale3 == 2){
             b.assign(mSqua.mul(tf.scalar(d3)).sin().abs())
         }
     }
     else{
-        if(scale1 == 0){
+        if(scale3 == 0){
             b.assign(mLog.mul(tf.scalar(d3)).mod(scalar256).div(scalar256))
         }
-        if(scale1 == 1){
+        if(scale3 == 1){
             b.assign(mLin.mul(tf.scalar(d3)).mod(scalar256).div(scalar256))
         }
-        if(scale1 == 2){
+        if(scale3 == 2){
             b.assign(mSqua.mul(tf.scalar(d3)).mod(scalar256).div(scalar256))
         }        
     }
     textbox.value = d3
     display()
 
+}
+
+function redScale(){
+
+    scale1 = this.value
+
+    var textbox = document.getElementById('RDiv');
+    divisor = parseFloat(textbox.value)
+    
+    newRedDiv(divisor)
+    
+}
+
+function greScale(){
+
+    scale2 = this.value
+
+    var textbox = document.getElementById('GDiv');
+    divisor = parseFloat(textbox.value)
+    
+    newGreDiv(divisor)
+    
+}
+
+function bluScale(){
+
+    scale3 = this.value
+
+    var textbox = document.getElementById('BDiv');
+    divisor = parseFloat(textbox.value)
+    
+    newBluDiv(divisor)
+    
+}
+
+var radioRed = document.getElementsByName("scaleChoiceRed");
+
+
+for(var i=0; i < radioRed.length; i++){
+  radioRed[i].addEventListener('click', redScale, false);
+}
+
+var radioGre = document.getElementsByName("scaleChoiceGre");
+
+
+for(var i=0; i < radioGre.length; i++){
+  radioGre[i].addEventListener('click', greScale, false);
+}
+
+var radioBlu = document.getElementsByName("scaleChoiceBlu");
+
+
+for(var i=0; i < radioBlu.length; i++){
+  radioBlu[i].addEventListener('click', bluScale, false);
+}
+
+function redWave(){
+
+    if(this.value == 0){
+        sin1 = true
+    }
+    else if(this.value == 1){
+        sin1 = false
+    }
+    
+    var textbox = document.getElementById('RDiv');
+    divisor = parseFloat(textbox.value)
+    
+    newRedDiv(divisor)
+
+}
+
+function greWave(){
+
+    if(this.value == 0){
+        sin2 = true
+    }
+    else if(this.value == 1){
+        sin2 = false
+    }
+    
+    var textbox = document.getElementById('GDiv');
+    divisor = parseFloat(textbox.value)
+    
+    newGreDiv(divisor)
+
+}
+
+function bluWave(){
+
+    if(this.value == 0){
+        sin3 = true
+    }
+    else if(this.value == 1){
+        sin3 = false
+    }
+    
+    var textbox = document.getElementById('BDiv');
+    divisor = parseFloat(textbox.value)
+    
+    newBluDiv(divisor)
+
+}
+
+var radioRed2 = document.getElementsByName("waveChoiceRed");
+
+
+for(var i=0; i < radioRed2.length; i++){
+  radioRed2[i].addEventListener('click', redWave, false);
+}
+
+var radioGre2 = document.getElementsByName("waveChoiceGre");
+
+
+for(var i=0; i < radioGre2.length; i++){
+  radioGre2[i].addEventListener('click', greWave, false);
+}
+
+var radioBlu2 = document.getElementsByName("waveChoiceBlu");
+
+
+for(var i=0; i < radioBlu2.length; i++){
+  radioBlu2[i].addEventListener('click', bluWave, false);
 }
 
 
