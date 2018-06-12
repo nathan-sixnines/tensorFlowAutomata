@@ -1,0 +1,668 @@
+
+<style>
+.Control {
+  background: rgba(128, 128, 128, 0.5);
+  padding: 0.5em;
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  width: 729px;
+}
+</style>
+
+<div class="Control">
+
+ <button onclick="reSize()">Resize Canvas</button>
+ <button onclick="patternView()">Conv Pattern Editor</button>
+ <button onclick="displayView()">Main Display</button>
+ <button onclick="advanceAuto()">Advance Automation (W key also works)</button>
+ <p>Automata Iteration Display Stride:</p>
+ <input type="text" id="Stride" value="1" onkeyup="setDispStride(this.value)" >
+ 
+ <p> Page built by Nathan Epstein (Aeium) </p>
+ <p> Right click on the canvas to save. If you make a good one tweet it at me!</p>
+<a href="https://twitter.com/intent/tweet?screen_name=Aeium&ref_src=twsrc%5Etfw" class="twitter-mention-button" data-show-count="false">Tweet to @Aeium</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+</div>
+
+<div id="container">
+<canvas id="myCanvas" width="1000" height="1000" style="border:1px solid #d3d3d3;">
+Your browser does not support the HTML5 canvas tag.</canvas>
+
+<canvas id="myCanvas2" width="729" height="729" style="border:1px solid #d3d3d3;">
+Your browser does not support the HTML5 canvas tag.</canvas>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.10.0"> </script>
+
+<script>
+
+//<script src="https://cdn.jsdelivr.net/gh/nicolaspanel/numjs@0.15.1/dist/numjs.min.js">
+
+/*<script type='text/javascript' src='E:\numjs_local\dist\numjs.js'>
+
+<script src="math.min.js" type="text/javascript">*/
+
+var displayPixelSize = 1701
+
+var frameSize = 1701
+var frame2Size = 729
+
+var canvas = document.getElementById("myCanvas");
+var ctx    = canvas.getContext("2d");
+
+var canvas2 = document.getElementById("myCanvas2");
+var ctx2    = canvas2.getContext("2d");
+
+var cellSize = 1
+
+var templateSize = 5
+
+var displayStride = 1
+
+function setDispStride(newVal){
+
+    displayStride = parseInt(newVal)
+}
+
+var calcBatch = 0     // keep track of what frame until next delay
+
+var displayStartFrame  = 1
+
+var frameNum = 0
+
+function mod(n, m) {
+        return ((n % m) + m) % m;
+}
+
+function modularPaddArray(prePadArray, border){  // buffer should be input tile radius
+
+    var ppa = prePadArray
+    var b   = (border.shape[0]-1) /2   // size of padding
+       
+    var upper_pad = ppa.slice([ppa.shape[0]-b,0],[b,ppa.shape[1]])
+    var lower_pad = ppa.slice([0,0],[b,ppa.shape[1]])
+    
+    var partial   = tf.concat([upper_pad, ppa, lower_pad], axis = 0)
+    
+    var left_pad  = partial.slice([0,partial.shape[1] - b],[partial.shape[0],b])
+     
+    var right_pad = partial.slice([0,0],[partial.shape[0],b])
+  
+    return tf.concat([left_pad, partial, right_pad], axis = 1) ////console.log(padded)
+
+}
+
+
+function setPix1(x, y, value){
+
+    if(value != 0) {value += 200}
+
+    var color1 = (value / 2) % 256
+    var color2 = (value / 4) % 256
+    var color3 = (value / 8) % 256
+
+    setPix(x,y, color1, color2, color3)
+
+}
+
+function setPix(x, y, r, g, b){
+
+
+    var xPix = x * cellSize;
+    var yPix = y * cellSize;
+
+    ctx.fillStyle = 'rgb(' + r + ',' + g + ',' + b + ')';
+    
+    ctx.fillRect(xPix, yPix , cellSize, cellSize);
+
+}
+
+function applyRule1(readFrame, filter){
+
+    //var border = (template.shape[0] -1) / 2
+    
+    //var paddedReadFrame = modularPaddArray(readFrame, border)
+    
+    //console.log(readFrame.shape)
+    //console.log(paddedReadFrame.shape)
+    //console.log(template.shape)
+    
+    var padded = modularPaddArray(readFrame, filter)
+    
+    console.log(padded.shape)
+    
+    console.log("before conv")
+    
+    readFrame.assign(tf.conv2d(padded, filter, [1,1],'valid'))
+
+}
+
+function applyRule2(frame, modList){
+
+
+// https://js.tensorflow.org/api/0.6.1/#clipByValue
+
+// with clipby value I can have more mods!
+
+    for(var i = 0; i < modList.length; i++){
+    
+        // we can do more interesting colorations if the mod is 2
+        // because we can multiply the remainders with the original numbers without messing them up
+        if(modList[i] == 2){
+        
+            frame.assign(frame.mul(frame.mod(tf.scalar(2))))
+            frame.assign(frame.mod(tf.scalar(65536)))  // this solves some of the overflow problems
+            //frame.assign(frame.mod(tf.scalar(4096)))  // this solves some of the overflow problems
+         
+        
+        }
+        else{
+        
+            frame.assign(frame.mod(tf.scalar(modList[i])))
+    
+        }
+    
+    
+    }
+
+   //return frame
+ 
+}
+
+/*
+function display(frame){
+
+    var s0 = frame.shape[0]
+    var s1 = frame.shape[1]
+
+    list = frame.tolist()
+    for(var i = 0; i < s0; i++){
+        for(var j = 0; j < s1; j++){
+        
+            setPix1(i,j,list[i][j])
+        
+        }
+    }
+    
+}*/
+
+
+//var frame1 = nj.zeros([frameSize,frameSize])
+//var frame2 = nj.zeros((frameSize,frameSize), dtype = uint32)
+
+// https://stackoverflow.com/questions/34685947/adjust-single-value-within-tensor-tensorflow/34686952#34686952
+
+var values = new Array(displayPixelSize * displayPixelSize).fill(0);
+
+var startValue = 1  // maybe allow this to be changed later
+
+values[Math.floor(displayPixelSize*displayPixelSize/2)] = startValue
+
+//console.log( Math.floor(frameSize/2))
+console.log( values[Math.floor(displayPixelSize/2)*Math.floor(displayPixelSize/2)])
+
+//const frame1Init = tf.tensor(values, [displayPixelSize,displayPixelSize,1,1])
+
+const frame1 = tf.variable(tf.tensor(values, [displayPixelSize,displayPixelSize,1]))
+
+frame1.print()
+
+//var template = nj.array([[0,1,1,1,1,0],[1,0,0,0,0,1],[1,0,1,0,0,1],[0,1,1,1,1,0],[0,0,0,0,0,0],[0,1,1,1,1,1],[1,0,0,1,0,0,],[0,1,1,1,1,1,],[0,0,0,0,0,0],[0,0,1,1,1,0],[0,1,0,1,0,1],[0,0,1,0,0,1],
+ //                       [0,0,0,0,0,0],[1,0,1,1,1,1],[0,0,0,0,0,0],[0,0,1,1,1,0],[0,0,0,0,0,1],[0,0,0,0,0,1],[0,0,1,1,1,0],[0,0,0,0,0,0],[0,0,0,1,1,1],[0,0,1,0,0,0],[0,0,0,1,1,1],[0,0,1,0,0,0],[0,0,0,1,1,1]])
+
+//var templateTop = nj.zeros([25,9])
+//var templateBot = nj.zeros([25,10])
+
+//var template = nj.ones([9,9])
+
+////console.log(template.shape)
+////console.log(templateTop.shape)
+
+//template = nj.concatenate(nj.concatenate(templateTop, template), templateBot)
+
+                        
+//console.log(template.shape)
+
+var filterValues = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+ 
+/* 
+const template3  = tf.variable(tf.zeros([ 3, 3,1,1]))
+const template5  = tf.variable(tf.zeros([ 5, 5,1,1]))
+const template7  = tf.variable(tf.zeros([ 7, 7,1,1]))
+const template9  = tf.variable(tf.zeros([ 9, 9,1,1]))
+const template11 = tf.variable(tf.zeros([11,11,1,1]))
+*/
+
+const template3  = tf.variable(tf.ones([ 3, 3,1,1]))
+const template5  = tf.variable(tf.ones([ 5, 5,1,1]))
+const template7  = tf.variable(tf.ones([ 7, 7,1,1]))
+const template9  = tf.variable(tf.ones([ 9, 9,1,1]))
+const template11 = tf.variable(tf.zeros([11,11,1,1]))
+const template13 = tf.variable(tf.zeros([13,13,1,1]))
+const template15 = tf.variable(tf.zeros([15,15,1,1]))
+const template17 = tf.variable(tf.ones([17,17,1,1]))
+
+var templateList = [template3, template5, template7, template9, template11, template13, template15, template17]
+
+var whichTempate = 1  // 0 -> 3, 1 -> 5, 2 -> 7, 3 -> 9, 4 -> 11  thats about as close to making sense as this will get I think
+
+var modList  = [2]
+
+
+setPatternGridSize(templateList[whichTempate].shape[0])
+
+ctx.fillStyle = 'rgb(0,0,0)';
+
+ctx.fillRect(0,0, displayPixelSize, displayPixelSize);
+
+
+//console.log(template.shape)
+
+//array = nj.array([1,2,3,4,5,6,7,8,9])
+
+//console.log("what")
+
+//console.log(array)
+
+//console.log("testing math.js")
+
+function resetGrid(){
+
+ctx2.fillStyle = 'rgb(255,255,255)';
+ctx2.fillRect(0, 0, frame2Size, frame2Size)
+
+ctx2.fillStyle = 'rgb(0,0,0)';
+
+// template grid select buttons
+for(var i = 0; i < 8; i++){
+    ctx2.fillRect(40+80*i, 40, 40, 40)
+}
+
+ctx2.fillRect(40, frame2Size - 80, 80, 40)
+
+
+}
+
+function invertConvPattern(){
+
+    templateList[whichTempate].assign(templateList[whichTempate].add(tf.scalar(1)).mod(tf.scalar(2)))
+    displayTemplateGrid()
+
+}
+
+
+
+function setPatternGridSize(size){
+
+    // 0 -> 3, 1 -> 5, 2 -> 7, 3 -> 9, 4 -> 11  
+
+    var targetTemplate = Math.floor(size / 2) - 1
+
+    var gridSize = (whichTempate+1) * 2 + 1
+
+    //console.log(targetTemplate)
+    //console.log(whichTempate)
+    
+   // console.log(templateList[targetTemplate].shape)
+    //console.log(templateList[targetTemplate].print())
+    
+    console.log(size)
+    
+    console.log(gridSize)
+    
+    if(size > gridSize){
+    
+        console.log("size > gridsize")
+        
+        var diff = (size - gridSize)/2
+        
+        console.log(diff)
+        
+        console.log(templateList[whichTempate].shape)
+        
+        templateList[whichTempate].pad([[diff,diff],[diff,diff],[0,0],[0,0]]).print()
+        
+        console.log("test")
+        
+        //console.log(templateList[whichTempate].pad([diff,diff],[diff,diff]).shape)
+    
+        //templateList[targetTemplate].assign(templateList[whichTempate].pad([diff,diff],[diff,diff]))
+    
+    }
+    
+    if(size < gridSize){
+    
+        var diff = (gridSize - size)/2
+    
+        //console.log(diff)
+        //console.log(gridSize)
+    
+        //templateList[whichTempate].print()
+        
+        //templateList[whichTempate].slice([diff, diff],[gridSize-diff*2,gridSize-diff*2]).print()
+    
+        templateList[targetTemplate].assign(templateList[whichTempate].slice([diff, diff],[gridSize-diff*2,gridSize-diff*2]))
+    
+    }
+    
+    whichTempate = targetTemplate
+    
+    //console.log(whichTempate)
+    
+    //templateList[whichTempate].print()
+    
+    displayTemplateGrid()
+
+}
+
+function displayTemplateGrid(){
+
+    resetGrid()  // just graphics here no matrix stuff
+    var gridSize = (whichTempate+1) * 2 + 1
+
+    var space = frame2Size - 240
+
+    var gridStride = Math.floor(space / gridSize)
+    
+    var JSarray = templateList[whichTempate].dataSync()
+    
+    for(var j = 0; j < gridSize; j++){
+        for(var i = 0; i < gridSize; i++){
+    
+            //ctx2.fillText(list[i][j].toString(), i*gridStride, j*gridStride)
+            
+            if(JSarray[(gridSize-1-j)*gridSize+(gridSize-1-i)] == 1){
+                ctx2.fillRect(i*gridStride + 120 + 2, j*gridStride+120 + 2, gridStride - 2, gridStride - 2)
+            }
+            else{
+                ctx2.fillRect(i*gridStride + 120 + 2, j*gridStride+120 + 2, gridStride - 2, gridStride - 2)
+                ctx2.fillStyle = 'rgb(255,255,255)';
+                ctx2.fillRect(i*gridStride + 120 + 8, j*gridStride+120 + 8, gridStride - 14, gridStride - 14)
+                ctx2.fillStyle = 'rgb(0,0,0)';
+            }
+        }
+    }
+    
+
+}
+
+function flipTemplateBit(Ypix, Xpix){
+
+    var gridSize = (whichTempate+1) * 2 + 1
+    var space = frame2Size - 240
+    var gridStride = Math.floor(space / gridSize)
+
+    for(var i = 0; i < gridSize; i++){
+        for(var j = 0; j < gridSize; j++){
+    
+            if(Xpix > (i*gridStride + 120 + 2)
+                && Xpix <  ((i+1)*gridStride + 120 + 2)
+                && Ypix >  ((j)*gridStride + 120 + 2)
+                && Ypix <  ((j+1)*gridStride + 120 + 2)){
+            
+                    //console.log("ypix: " + Ypix.toString() + " xpix: " + Xpix.toString())
+                    //console.log(i)
+                    //console.log(j)
+                    
+                    flipTemplateBit2((gridSize-1-j),(gridSize-1-i))
+            }
+        }
+    }
+    
+    displayTemplateGrid()
+
+}
+
+function flipTemplateBit2(y,x){
+
+    console.log("flipTemplateBit2 y:" + y.toString() + " x: " + x.toString())
+
+    var filterList = new Array(templateList[whichTempate].shape[0] * templateList[whichTempate].shape[1]).fill(0)
+    
+    console.log(templateList[whichTempate].shape)
+    
+    var TemplateDim1 = templateList[whichTempate].shape[0]
+    var TemplateDim2 = templateList[whichTempate].shape[1]
+    
+    filterList[y*templateList[whichTempate].shape[1]+x] = 1
+
+    console.log("1")
+    
+    templateList[whichTempate].print()
+    
+    console.log("2")
+    
+    tf.tensor(filterList,[TemplateDim1,TemplateDim2,1,1]).print()
+    
+    console.log("3")
+    
+    templateList[whichTempate].add(tf.tensor(filterList,[TemplateDim1,TemplateDim2,1,1])).print()
+    
+    tf.mod(templateList[whichTempate].add(tf.tensor(filterList,[TemplateDim1,TemplateDim2,1,1])),tf.scalar(2)).print()
+    
+    templateList[whichTempate].assign(tf.mod(templateList[whichTempate].add(tf.tensor(filterList,[TemplateDim1,TemplateDim2,1,1])),tf.scalar(2)))
+
+}
+
+
+const scalar16   = tf.scalar(16)
+const scalar32   = tf.scalar(32)
+const scalar64   = tf.scalar(64)
+const scalar256 = tf.scalar(256)
+
+//const displayStartValues1 = tf.concat([tf.zerosLike(frame1),tf.zerosLike(frame1),tf.zerosLike(frame1)],2)
+
+const displayVar1 = tf.variable(tf.zeros([displayPixelSize,displayPixelSize,3]))
+
+//const displayStartValues2 = tf.concat([tf.zeros([frameSize, frameSize,1,1]),tf.zeros([frameSize, frameSize,1,1]),tf.zeros([frameSize, frameSize,1,1])],2)
+
+const displayVar2 = tf.variable(tf.zeros([frameSize,frameSize,3]))
+
+function display (frame1){
+
+    //console.log(frame1.dtype)
+    //console.log(scalar2.dtype)
+    //console.log(scalar4.dtype)
+    //console.log(scalar256.dtype)
+
+    //console.log(frame1.shape)
+    
+    console.log(frameNum)
+    
+    console.log(mod((frameNum + displayStartFrame - displayStride),displayStride)) 
+    
+    if(mod(frameNum,displayStride)  == displayStartFrame || displayStride == 1){
+    
+        // multiply first to highlist colors
+        
+        console.log("displaying")
+        
+        //console.log(displayVar1.shape)
+        //console.log(frame1.shape)
+        
+    
+        displayVar1.assign(tf.concat([frame1.mul(scalar16).mod(scalar256).div(scalar256),
+                                     frame1.mul(scalar32).mod(scalar256).div(scalar256),
+                                     frame1.mul(scalar64).mod(scalar256).div(scalar256)],2))
+                                     
+        
+        displayVar2.assign(tf.image.resizeNearestNeighbor(displayVar1, [frameSize,frameSize]))
+        //displayVar2.assign(tf.image.resizeBilinear(displayVar1, [frameSize,frameSize]))
+    
+        tf.toPixels(displayVar2, canvas).then(function(){
+        
+            ctx.font = Math.floor(frameSize/15).toString() + "px Arial"
+            ctx.fillStyle = "white"
+            ctx.fillText(frameNum.toString() , canvas.width- canvas.width*(19/20), canvas.height - canvas.height*(1/20));})
+    }
+    
+    
+
+}
+
+function clearFrame(){
+
+    tf.tidy(() => {
+    frame1.assign(tf.tensor(values, [displayPixelSize,displayPixelSize,1]))
+    frameNum = 0
+    display(frame1)
+    })
+
+}
+
+function advanceAuto(){
+
+
+            console.log("DISPLAYSTRIDE = " + displayStride.toString())
+
+            console.log(frameNum)
+            if(displayStride != 1){
+                while(true){
+            
+                    console.log("DISPLAYSTRIDE = " + displayStride.toString())
+            
+                    console.log(mod(frameNum,2))
+                    console.log(mod(frameNum+1,2))
+            
+                    console.log(displayStride)
+            
+                    console.log(mod(frameNum,displayStride)) 
+                    console.log(mod((frameNum + 1),displayStride)) 
+                    
+                    console.log("displayStart = " + displayStartFrame.toString())
+    
+                    if(mod((frameNum + 1),displayStride)   == displayStartFrame){
+    
+                        tf.tidy(() => {
+                
+                            console.log(frame1.shape)
+                            applyRule1(frame1, templateList[whichTempate])
+                            console.log(frame1.shape)
+                            //console.log("test1")
+                            applyRule2(frame1, modList)
+                            frameNum++
+                            console.log(frameNum)
+                            console.log("disp loop")
+                            display(frame1)
+                        });
+                        break
+                    }
+                    else{
+            
+                        tf.tidy(() => {
+                
+                            console.log(frame1.shape)
+                            applyRule1(frame1, templateList[whichTempate])
+                            console.log(frame1.shape)
+                            //console.log("test1")
+                            applyRule2(frame1, modList)
+                            frameNum++
+            
+                            //frame1.print()
+                            //template.print()
+            
+                            console.log("process loop")
+    
+                        });
+                    }
+                }
+            }
+                
+            else{
+                
+                    tf.tidy(() => {
+                    
+                        console.log(frame1.shape)
+                        applyRule1(frame1, templateList[whichTempate])
+                        console.log(frame1.shape)
+                        //console.log("test1")
+                        applyRule2(frame1, modList)
+                        frameNum++
+            
+                        //frame1.print()
+                        //template.print()
+                        console.log(frameNum)
+                        console.log("disp loop")
+                        display(frame1)
+                        
+                    }); 
+            }
+}
+
+document.onkeydown = function(e) {
+    switch (e.keyCode) {
+        case 8:
+        
+            clearFrame()
+            break
+    
+        case 87:
+        
+            console.log("w key pressed")
+            advanceAuto()
+
+            break
+    }
+}
+        
+document.getElementById("container").addEventListener('click', function(event) {
+
+    //frame1.print()
+    //template.print()
+    
+
+    //tf.toPixels(frame1, canvas)
+    
+    
+    var canvas1Left = canvas.offsetLeft;
+    var canvas1Top  = canvas.offsetTop;
+    
+    var pixX1 = event.pageX - canvas1Left;
+    var pixY1 = event.pageY - canvas1Top;
+    
+    var canvas2Left = canvas2.offsetLeft;
+    var canvas2Top  = canvas2.offsetTop;
+    
+    var pixX2 = event.pageX - canvas2Left;
+    var pixY2 = event.pageY - canvas2Top;
+    
+    
+    //if(pixY1 >= 0 && pixY1 <= frameSize){
+
+        // these functions both assign the new value to frame1 so they don't need to return anything
+
+    //}
+    //else{
+    
+
+    
+        if(pixY2 >= 40 && pixY2 <= 80){
+    
+            if(mod(pixX2,80) >= 40){
+        
+                var gridSize = 1+ 2 * (Math.floor(pixX2 / 80) + 1)
+        
+                setPatternGridSize(gridSize)
+
+
+            }
+        }
+        
+        if(pixY2 >= 120){
+        
+            flipTemplateBit(pixY2, pixX2)
+        
+        }
+        
+        if(pixY2 > frame2Size - 80 && pixY2 < frame2Size - 40 && pixX2 > 40 && pixX2 < 120){
+        
+            invertConvPattern()
+        
+        }
+    //}
+    
+}); 
+
+
+</script>
