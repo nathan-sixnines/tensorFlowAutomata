@@ -17,6 +17,7 @@
  <button onclick="displayView()">Main Display</button>
  <button onclick="setMods()">Set Mods</button>
  <button onclick="advanceAuto()">Advance Automation (W key also works)</button>
+ <button onclick="toggleCounter()">Toggle Counter</button>
  <p>Automata Iteration Display Stride:</p>
  <input type="text" id="Stride" value="1" onkeyup="setDispStride(this.value)" >
  
@@ -65,6 +66,8 @@ var reload = false
 var defaultHeight = 801
 var defaultWidth = 801
 var frame2Size = 729
+
+var displayCounter = true
 
 // load defaults if arguments are not provided
 if(isNaN(heightCanvas)){heightCanvas = defaultHeight; reload = true;}
@@ -287,10 +290,20 @@ function applyRule2(frame, modList){
         else{
         
             //frame.assign(frame.mod(tf.scalar(modList[i])))
-            frame.assign(frame.mul(frame.mod(tf.scalar(modList[i])).clipByValue(0,1)))
+            
+            //console.log("MOD: " + modList[i])
+            
+            //frame.mod(tf.scalar(modList[i])).print()
+            
+            //frame.mod(tf.scalar(modList[i])).clipByValue(0,1).print()
+            
+            frame.assign(frame.mul(frame.mod(tf.scalar(modList[i])).sub(tf.scalar(modList[i])).mod(tf.scalar(modList[i])).clipByValue(0,1)))
         }
 
     }
+    
+    //frame.print()
+    
     frame.assign(frame.mod(tf.scalar(globalMod)))
 
    //return frame
@@ -613,12 +626,20 @@ function display (frame1){
     
         tf.toPixels(displayVar2, canvas).then(function(){
         
-            ctx.font = Math.floor(widthCanvas/15).toString() + "px Arial"
-            ctx.fillStyle = "white"
-            ctx.fillText(frameNum.toString() , canvas.width- canvas.width*(19/20), canvas.height - canvas.height*(1/20));})
+            if(displayCounter){
+                ctx.font = Math.floor(widthCanvas/15).toString() + "px Arial"
+                ctx.fillStyle = "white"
+                ctx.fillText(frameNum.toString() , canvas.width- canvas.width*(19/20), canvas.height -      canvas.height*(1/20))}
+            })
     }
     
     
+
+}
+
+function toggleCounter(){
+
+    displayCounter = ! displayCounter
 
 }
 
