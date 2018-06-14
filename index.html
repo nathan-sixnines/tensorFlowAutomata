@@ -18,6 +18,7 @@
  <button onclick="setMods()">Set Mods</button>
  <button onclick="advanceAuto()">Advance Automation (W key also works)</button>
  <button onclick="toggleCounter()">Toggle Counter</button>
+ <button onclick="togAnimate()">Toggle Animate</button>
  <p>Automata Iteration Display Stride:</p>
  <input type="text" id="Stride" value="1" onkeyup="setDispStride(this.value)" >
  
@@ -653,6 +654,14 @@ function clearFrame(){
 
 }
 
+var animate = false
+
+function togAnimate(){
+
+    animate = ! animate
+
+}
+
 function advanceAuto(){
 
 
@@ -687,7 +696,11 @@ function advanceAuto(){
                             console.log(frameNum)
                             console.log("disp loop")
                             display(frame1)
-                        });
+                        })
+                        
+                        if(animate){
+                            window.requestAnimationFrame(advanceAuto);
+                        }
                         break
                     }
                     else{
@@ -729,6 +742,10 @@ function advanceAuto(){
                         display(frame1)
                         
                     }); 
+                    
+                    if(animate){
+                        window.requestAnimationFrame(advanceAuto);
+                    }
             }
 }
 
