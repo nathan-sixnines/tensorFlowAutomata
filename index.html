@@ -36,7 +36,7 @@ Your browser does not support the HTML5 canvas tag.</canvas>
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.10.0"> </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/0.14.2/tf.min.js"> </script>
 
 <script>
 
@@ -625,16 +625,10 @@ function display (frame1){
         displayVar2.assign(tf.image.resizeNearestNeighbor(displayVar1, [heightCanvas,widthCanvas]))
         //displayVar2.assign(tf.image.resizeBilinear(displayVar1, [frameSize,frameSize]))
     
-        tf.toPixels(displayVar2, canvas).then(function(){
-        
-            if(displayCounter){
-                ctx.font = Math.floor(widthCanvas/15).toString() + "px Arial"
-                ctx.fillStyle = "white"
-                ctx.fillText(frameNum.toString() , canvas.width- canvas.width*(19/20), canvas.height -      canvas.height*(1/20))}
-            })
+
     }
     
-    
+   
 
 }
 
@@ -698,6 +692,14 @@ function advanceAuto(){
                             display(frame1)
                         })
                         
+                        tf.toPixels(displayVar2, canvas).then(function(){
+                        
+                            if(displayCounter){
+                                ctx.font = Math.floor(widthCanvas/15).toString() + "px Arial"
+                                ctx.fillStyle = "white"
+                                ctx.fillText(frameNum.toString() , canvas.width- canvas.width*(19/20), canvas.height -      canvas.height*(1/20))}
+                            })
+                        
                         if(animate){
                             window.requestAnimationFrame(advanceAuto);
                         }
@@ -742,6 +744,14 @@ function advanceAuto(){
                         display(frame1)
                         
                     }); 
+                    
+                    tf.toPixels(displayVar2, canvas).then(function(){
+                    
+                        if(displayCounter){
+                            ctx.font = Math.floor(widthCanvas/15).toString() + "px Arial"
+                            ctx.fillStyle = "white"
+                            ctx.fillText(frameNum.toString() , canvas.width- canvas.width*(19/20), canvas.height -      canvas.height*(1/20))}
+                        })
                     
                     if(animate){
                         window.requestAnimationFrame(advanceAuto);
