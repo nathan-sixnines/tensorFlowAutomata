@@ -584,6 +584,7 @@ function flipTemplateBit2(y,x){
 const scalar16   = tf.scalar(16)
 const scalar32   = tf.scalar(32)
 const scalar64   = tf.scalar(64)
+const scalar128   = tf.scalar(128)
 const scalar256 = tf.scalar(256)
 
 //const displayStartValues1 = tf.concat([tf.zerosLike(frame1),tf.zerosLike(frame1),tf.zerosLike(frame1)],2)
@@ -617,9 +618,9 @@ function display (frame1){
         //console.log(frame1.shape)
         
     
-        displayVar1.assign(tf.concat([frame1.mul(scalar16).mod(scalar256).div(scalar256),
+        displayVar1.assign(tf.concat([frame1.mod(scalar256).div(scalar256),
                                      frame1.mul(scalar32).mod(scalar256).div(scalar256),
-                                     frame1.mul(scalar64).mod(scalar256).div(scalar256)],2))
+                                     frame1.mul(scalar128).mod(scalar256).div(scalar256)],2))
                                      
         
         displayVar2.assign(tf.image.resizeNearestNeighbor(displayVar1, [heightCanvas,widthCanvas]))
