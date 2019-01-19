@@ -39,6 +39,8 @@
       top: 10px;
       right: 10px;
       width: 300px;
+      
+    z-index: 10
     
 }
 
@@ -186,7 +188,6 @@
 
 						<li><button onclick="advanceAuto()">Advance Automaton (W key)</button></li>
 						<li><button onclick="resetAuto()">Reset Automaton (R key)</button></li>
-				</li>
 			</ul>
 		</li>
 		<li class="uiBlock"><input type="checkbox" id="item-0" /><label for="item-0">Display Settings</label>
@@ -197,7 +198,6 @@
   color: white; color:black;" onkeyup="setDispStride(this.value)" ></p></li>
 						<li><input onclick="togAnimate()" type="checkbox" id="item-0-1" /><label for="item-0-1">Toggle Animate</label></li>
 						<li><input onclick="toggleCounter()" type="checkbox" id="item-0-2" /><label for="item-0-2">Toggle Iteration Counter</label></li>
-				</li>
 			</ul>
 		</li>
 		<li class="uiBlock"><input type="checkbox" id="item-1" /><label for="item-1">Automaton Parameters</label>
@@ -206,18 +206,23 @@
 						<li><li><input onclick="patternView()" type="checkbox" id="item-1-1" /><label for="item-1-1">Conv Filter Editor</label></li></li>
 						<li> <p>Mods: (comma seperate for multiple mods)<input type="text" id="Stride" value="2" style="position:relative; background: rgba(230,230,230,.5); z-index: 5; border:2px white; visibility: visible; 
   color: white; color:black;" onkeyup="setMods(this.value)"></p></li>
-				</li>
 			</ul>
 		</li>
+		<li class="uiBlock"><input type="checkbox" id="item-0" /><label for="item-b">Pixel Edit</label>
+			<ul>
+						<li> <p>Pixel Edit Value<input type="text" id="Stride" value="1" style="position:relative; background: rgba(230,230,230,.5); z-index: 5; border:2px white; visibility: visible; 
+  color: white; color:black;" onkeyup="setPixEdit(this.value)" ></p></li>
+						<li><input onclick="togPixEdit()" type="checkbox" id="item-0-1" /><label for="item-3-1">Toggle Pixel Edit Mode</label></li>
+			</ul>
 	</ul>
 </div>
 
 
 <div id="container">
-<canvas id="myCanvas" style="position:fixed; left:0; top:0; width:100%; height:100%; z-index:-1;">
+<canvas id="myCanvas" style="position:fixed; left:0; top:0; width:100%; height:100%; zindex:1;">
 Your browser does not support the HTML5 canvas tag.</canvas>
 
-<canvas id="myCanvas2" width="729" height="729" style="border:1px solid #d3d3d3; display: none">
+<canvas id="myCanvas2" width="729" height="729" style="position:fixed; border:1px solid #d3d3d3; zindex:5; display: none">
 Your browser does not support the HTML5 canvas tag.</canvas>
 
 </div>
@@ -282,7 +287,7 @@ var reload = false
 
 var defaultHeight = window.innerHeight
 var defaultWidth  = window.innerWidth
-var defaultHeightCells = Math.floor(window.innerHeight/2)
+var defaultHeightCells = Math.floor(window.innerHeight/4)
 var defaultWidthCells = Math.floor(defaultHeightCells * (defaultWidth/defaultHeight))
 
 if(mod(defaultWidthCells,2) == 0){
@@ -295,16 +300,29 @@ if(mod(defaultHeightCells,2) == 0){
 var frame2Size = 729
 
 console.log(window.innerHeight)
-console.log(Math.floor(window.innerHeight/2))
+console.log(Math.floor(window.innerHeight/4))
 
 var displayCounter = true
 
 // load defaults if arguments are not provided
 if(isNaN(heightCanvas)){heightCanvas = defaultHeight; reload = true;}
+else if(heightCanvas != window.innerHeight){
+    ctx.canvas.height = heightCanvas
+
+}
 if(isNaN(widthCanvas)){widthCanvas  = defaultWidth; reload = true;}
+else if(widthCanvas != window.innerWidth){
+    ctx.canvas.width = widthCanvas
+
+}
 if(isNaN(heightPixels)){heightPixels =  defaultHeightCells; reload = true;}
 if(isNaN(widthPixels)){widthPixels  =  defaultWidthCells; reload = true;}
 
+document.getElementById('myCanvas').style.height = heightCanvas
+document.getElementById('myCanvas').style.width = widthCanvas
+    
+console.log("~~~~~")
+    
 console.log(getParameterByName('hC'))
 
 if(reload){
@@ -361,6 +379,8 @@ function patternView(){
 
     console.log(document.getElementById('myCanvas2').style.display)
 
+    console.log(patternViewDisplay)
+    
 }
 
 var modList  = [2]
@@ -405,57 +425,6 @@ function setMods(modsStr){
 
 }
 
-function setMods2(){
-
-    var string1 = "Enter modulus for automation, or comma spaced list of mods"
-    var string2 = ""
-    for (var i = 0; i < modList.length; i++){
-        string2 += modList[i].toString()
-        if(i < (modList.length - 1)){
-            string2 += ", "
-        }
-    }
-    var modsStr = prompt(string1, string2);
-
-    console.log(modsStr)
-    
-    var modsStrArray = modsStr.split(',')
-    
-    console.log(modsStrArray)
-    
-    modList = []
-    
-    for (var i = 0; i < modsStrArray.length; i++){
-    
-        console.log(modsStrArray[i])
-        console.log(isNaN(modsStrArray[i]))
-        
-    
-        if(! isNaN(modsStrArray[i])){
-            modList.push(parseInt(modsStrArray[i]))
-        }
-    
-    }
-    
-    console.log(modList)
-    
-    globalMod = modList[0]
-    var count = 1
-        
-    console.log(globalMod)
-    while(globalMod < 65536*2){
-        
-        console.log(globalMod)
-        globalMod = globalMod * modList[mod(count,modList.length)]
-        count++
-        console.log(globalMod)
-    }
-    
-    console.log(globalMod)
-    
-
-}
-
 
 var cellSize = 1
 
@@ -466,6 +435,14 @@ var displayStride = 1
 function setDispStride(newVal){
 
     displayStride = parseInt(newVal)
+}
+
+var pixEditVal = 1
+
+function setPixEdit(newVal){
+
+    pixEditVal = newVal
+
 }
 
 var calcBatch = 0     // keep track of what frame until next delay
@@ -613,14 +590,74 @@ function display(frame){
 // https://stackoverflow.com/questions/34685947/adjust-single-value-within-tensor-tensorflow/34686952#34686952
 
 var values = new Array(heightPixels * widthPixels).fill(0);
-
 var startValue = 1  // maybe allow this to be changed later
-
 values[Math.floor(heightPixels*widthPixels/2)] = startValue
-
 const frame1 = tf.variable(tf.tensor(values, [heightPixels,widthPixels,1]))
 
-frame1.print()
+
+function resetAuto(){
+
+    tf.tidy(() => {
+
+        values = new Array(heightPixels * widthPixels).fill(0);
+        startValue = 1  // maybe allow this to be changed later
+        values[Math.floor(heightPixels*widthPixels/2)] = startValue
+        frame1.assign(tf.tensor(values, [heightPixels,widthPixels,1]))
+    
+    })
+    
+    frameNum = 0
+    display (frame1)
+    
+    tf.toPixels(displayVar2, canvas).then(function(){
+    
+        if(displayCounter){
+            ctx.font = Math.floor(widthCanvas/15).toString() + "px Arial"
+            ctx.fillStyle = "white"
+            ctx.fillText(frameNum.toString() , canvas.width- canvas.width*(19/20), canvas.height -      canvas.height*(1/20))}
+    })
+
+}
+
+function pixEdit(xCo, yCo){
+
+    //console.log(values.length)
+    
+    //console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    //console.log(heightPixels)
+    //console.log(widthPixels)
+    //console.log(widthPixels*heightPixels)
+
+    tf.tidy(() => {
+
+        values = new Array(heightPixels * widthPixels).fill(0);
+        editValue = pixEditVal
+        values[yCo * widthPixels + xCo] = editValue
+        frame1.assign(frame1.add(tf.tensor(values, [heightPixels,widthPixels,1])))
+    
+    })
+    
+    display (frame1)
+    
+    tf.toPixels(displayVar2, canvas).then(function(){
+    
+        if(displayCounter){
+            ctx.font = Math.floor(widthCanvas/15).toString() + "px Arial"
+            ctx.fillStyle = "white"
+            ctx.fillText(frameNum.toString() , canvas.width- canvas.width*(19/20), canvas.height -      canvas.height*(1/20))}
+    })
+    
+}
+
+pixEditMode = false
+
+function togPixEdit(){
+
+    pixEditMode = !pixEditMode
+
+}
+
+//frame1.print()
 
 //var template = nj.array([[0,1,1,1,1,0],[1,0,0,0,0,1],[1,0,1,0,0,1],[0,1,1,1,1,0],[0,0,0,0,0,0],[0,1,1,1,1,1],[1,0,0,1,0,0,],[0,1,1,1,1,1,],[0,0,0,0,0,0],[0,0,1,1,1,0],[0,1,0,1,0,1],[0,0,1,0,0,1],
  //                       [0,0,0,0,0,0],[1,0,1,1,1,1],[0,0,0,0,0,0],[0,0,1,1,1,0],[0,0,0,0,0,1],[0,0,0,0,0,1],[0,0,1,1,1,0],[0,0,0,0,0,0],[0,0,0,1,1,1],[0,0,1,0,0,0],[0,0,0,1,1,1],[0,0,1,0,0,0],[0,0,0,1,1,1]])
@@ -859,11 +896,11 @@ function flipTemplateBit2(y,x){
 }
 
 
-const scalar16   = tf.scalar(16)
-const scalar32   = tf.scalar(32)
-const scalar64   = tf.scalar(64)
+const scalar16    = tf.scalar(16)
+const scalar32    = tf.scalar(32)
+const scalar64    = tf.scalar(64)
 const scalar128   = tf.scalar(128)
-const scalar256 = tf.scalar(256)
+const scalar256   = tf.scalar(256)
 
 //const displayStartValues1 = tf.concat([tf.zerosLike(frame1),tf.zerosLike(frame1),tf.zerosLike(frame1)],2)
 
@@ -873,7 +910,8 @@ const displayVar1 = tf.variable(tf.zeros([heightPixels,widthPixels,3]))
 
 const displayVar2 = tf.variable(tf.zeros([heightCanvas,widthCanvas,3]))
 
-function display (frame1){
+
+function display (frame1){   // this does not actually call to pixels but gets the displayVars assigned properly
 
     //console.log(frame1.dtype)
     //console.log(scalar2.dtype)
@@ -907,13 +945,19 @@ function display (frame1){
 
     }
     
-   
-
 }
 
 function toggleCounter(){
 
     displayCounter = ! displayCounter
+    
+    tf.toPixels(displayVar2, canvas).then(function(){
+    
+        if(displayCounter){
+            ctx.font = Math.floor(widthCanvas/15).toString() + "px Arial"
+            ctx.fillStyle = "white"
+            ctx.fillText(frameNum.toString() , canvas.width- canvas.width*(19/20), canvas.height -      canvas.height*(1/20))}
+    })
 
 }
 
@@ -936,7 +980,6 @@ function togAnimate(){
 }
 
 function advanceAuto(){
-
 
             console.log("DISPLAYSTRIDE = " + displayStride.toString())
 
@@ -1082,7 +1125,7 @@ document.getElementById("container").addEventListener('click', function(event) {
 
     //}
     //else{
-    
+    if(document.getElementById('myCanvas2').style.display != 'none'){  // edit conv pattern via clicks
 
     
         if(pixY2 >= 40 && pixY2 <= 80){
@@ -1108,9 +1151,23 @@ document.getElementById("container").addEventListener('click', function(event) {
             invertConvPattern()
         
         }
-    //}
+    } else if (pixEditMode){  // edit pixels in main canvas // for now easier to not allow both types of click edits at the same time
+    
+            //var heightCanvas = parseInt(getParameterByName('cH'))
+            //var widthCanvas  = parseInt(getParameterByName('cW'))
+            //var heightPixels = parseInt(getParameterByName('pH'))
+            //var widthPixels  = parseInt(getParameterByName('pW'))
+    
+            var editX = Math.floor(pixX1 / (widthCanvas / widthPixels))
+            var editY = Math.floor(pixY1 / (heightCanvas / heightPixels))
+    
+            pixEdit(editX, editY)
+    
+    }
     
 }); 
+
+resetAuto()
 
 
 </script>
