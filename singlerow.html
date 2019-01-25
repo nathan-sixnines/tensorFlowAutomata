@@ -562,14 +562,14 @@ function applyRule1(){
 
     ////console.log(values.slice(225,250))
     
-    values = valuesA//display[displayRow]
+    //values = valuesA//display[displayRow]
     
     valuesB.fill(BigInt(0))
     
     var min = BigInt(0)
     var max = BigInt(0)
 
-    for(var i = 0; i < values.length; i++){
+    for(var i = 0; i < valuesA.length; i++){
     
         value = BigInt(0)
         state = 0
@@ -579,22 +579,27 @@ function applyRule1(){
         right  = null
         
         if(i == 0){
-            left = values[values.length-1]
+            left = valuesA[valuesA.length-1]
         }
         else{
-            left = values[i-1]
+            left = valuesA[i-1]
         }
-        if(i == values.length-1){
-            right = values[0]
+        if(i == valuesA.length-1){
+            right = valuesA[0]
         }
         else{
-            right = values[i+1]
+            right = valuesA[i+1]
         }
         
-        center = values[i]
+        center = valuesA[i]
         
             
         value = left + center + right
+        
+        if(Math.floor(Math.random() * 1000) == 0){
+            
+            value -= BigInt(1)
+        }
         
         if(left != 0){
             state += 4
@@ -659,25 +664,13 @@ function applyRule1(){
         }*/
         
         if(rulebook[state] == 1){
-        
-            console.log(i)
-            console.log(value)
-        
             valuesB[i] = value
+            
+
         
         }
         
         
-        if(value < min){
-        
-            min = value
-        
-        }
-        if(value > max){
-        
-            max = value
-        
-        }
 
             
         
@@ -694,27 +687,21 @@ function applyRule1(){
         if(mod(valuesB[i],BigInt(3)) == 0){
             valuesB[i] = BigInt(0)
         }        
-        if(mod(valuesB[i],BigInt(14)) == 0){
+        if(mod(valuesB[i],BigInt(17)) == 0){
             valuesB[i] = BigInt(0)
-        }       
+        }   
+        if(mod(valuesB[i],BigInt(41)) == 0){
+            valuesB[i] = BigInt(0)
+        }             
     }
     
-    ////console.log(min)
-    ////console.log(max)
+
     
-    ////console.log(valuesB[Math.floor(valuesB.length/2)])
+
     
-    ////console.log(valuesB)
-    ////console.log(values)
+    //console.log(valuesB)
     
-    //if(displayRow == display.length){
-    //    display.push(valuesB.slice())
-    //}else{
-    //    display[displayRow+1] = valuesB.slice()
-    //}
-    values = valuesB.slice()
-    
-    console.log(values)
+    valuesA = valuesB.slice()
     
 // iteration 135
 // -2 from middle
@@ -742,20 +729,24 @@ function applyRule1(){
 
 function displayAuto(){
 
-    if(displayRow > heightPixels){
+
+    
+
+    
+    if(displayRow >= heightPixels){
     
         ////console.log("yes, " + display.length + " is bigger than " + heightPixels)
     
-        display = display.slice(display.length-heightPixels, display.length)
+        //display = display.slice(display.length-heightPixels, display.length)
         displayRow -= 1
         
         //context.drawImage(img,sx,sy,swidth,sheight,x,y,width,height);
         
-        ctx.drawImage(canvas, 0, cellY, ctx.canvas.width, ctx.canvas.height - cellY,0,0)
+        ctx.drawImage(canvas, 0, cellY, ctx.canvas.width, ctx.canvas.height - cellY,0,0,ctx.canvas.width, ctx.canvas.height - cellY)
     }
     
-    ////console.log(display.length)
-    for(var j = 0; j < values.length; j++){
+        ////console.log(display.length)
+    for(var j = 0; j < valuesA.length; j++){
     
         setPix1(j,displayRow,valuesA[j])
     }
@@ -944,14 +935,6 @@ function setPatternGridSize(size){
 function toggleCounter(){
 
     displayCounter = ! displayCounter
-    
-    tf.toPixels(displayVar2, canvas).then(function(){
-    
-        if(displayCounter){
-            ctx.font = Math.floor(widthCanvas/15).toString() + "px Arial"
-            ctx.fillStyle = "white"
-            ctx.fillText(frameNum.toString() , canvas.width- canvas.width*(19/20), canvas.height -      canvas.height*(1/20))}
-    })
 
 }
 
@@ -1090,6 +1073,8 @@ document.onkeydown = function(e) {
             break
     }
 }
+
+displayAuto()
         
 document.getElementById("container").addEventListener('click', function(event) {
 
