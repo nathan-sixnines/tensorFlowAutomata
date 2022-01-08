@@ -596,9 +596,12 @@ function display(frame){
 
 var values = new Array(heightPixels * widthPixels).fill(0);
 var startValue = 1  // maybe allow this to be changed later
+var startIndex = Math.floor(heightPixels*widthPixels/2)
 values[Math.floor(heightPixels*widthPixels/2)] = startValue
 const frame1 = tf.variable(tf.tensor(values, [heightPixels,widthPixels,1]))
 
+var startX = mod(startIndex,widthPixels)
+var startY = Math.ceil(startIndex/heightPixels)
 
 function resetAuto(){
 
@@ -1179,9 +1182,23 @@ document.getElementById("container").addEventListener('click', function(event) {
             var editX = Math.floor(pixX1 / (widthCanvas / widthPixels))
             var editY = Math.floor(pixY1 / (heightCanvas / heightPixels))
 	    
-	    editX -= mod(editX,pixEditSpacing)
-	    editY -= mod(editY,pixEditSpacing) 
+            if(pixEditSpacing != 0){
+                console.log("pix edit")
+                console.log("original:", editX)
+
+	            editX -= mod(editX,pixEditSpacing)
+	            editY -= mod(editY,pixEditSpacing) 
     
+                centerXbump = mod(startX,pixEditSpacing)
+                centerYBump = mod(startY,pixEditSpacing)
+
+                // have grid align to start point please
+                editX += centerXbump
+                editY += centerYBump
+
+                console.log("mod:", mod(editX,pixEditSpacing))
+                console.log("after:",editX)
+            }
             pixEdit(editX, editY)
     
     }
