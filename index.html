@@ -212,6 +212,8 @@
 			<ul>
 						<li> <p>Pixel Edit Value<input type="text" id="Stride" value="1" style="position:relative; background: rgba(230,230,230,.5); z-index: 5; border:2px white; visibility: visible; 
   color: white; color:black;" onkeyup="setPixEdit(this.value)" ></p></li>
+						<li> <p>Pixel Edit Spacing<input type="text" id="Stride" value="0" style="position:relative; background: rgba(230,230,230,.5); z-index: 5; border:2px white; visibility: visible; 
+  color: white; color:black;" onkeyup="setPixEditSpacing(this.value)" ></p></li>
 						<li><input onclick="togPixEdit()" type="checkbox" id="item-0-1" /><label for="item-3-1">Toggle Pixel Edit Mode</label></li>
 			</ul>
 	</ul>
@@ -438,11 +440,14 @@ function setDispStride(newVal){
 }
 
 var pixEditVal = 1
+var pixEditSpacing = 0
 
 function setPixEdit(newVal){
-
     pixEditVal = newVal
-
+}
+	
+function setPixEditSpacing(newVal){
+    pixEditSpacing = newVal
 }
 
 var calcBatch = 0     // keep track of what frame until next delay
@@ -1173,6 +1178,9 @@ document.getElementById("container").addEventListener('click', function(event) {
     
             var editX = Math.floor(pixX1 / (widthCanvas / widthPixels))
             var editY = Math.floor(pixY1 / (heightCanvas / heightPixels))
+	    
+	    editX -= mod(editX,pixEditSpacing)
+	    editY -= mod(editY,pixEditSpacing) 
     
             pixEdit(editX, editY)
     
