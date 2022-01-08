@@ -443,11 +443,11 @@ var pixEditVal = 1
 var pixEditSpacing = 0
 
 function setPixEdit(newVal){
-    pixEditVal = newVal
+    pixEditVal = parseInt(newVal)
 }
 	
 function setPixEditSpacing(newVal){
-    pixEditSpacing = newVal
+    pixEditSpacing = parseInt(newVal)
 }
 
 var calcBatch = 0     // keep track of what frame until next delay
